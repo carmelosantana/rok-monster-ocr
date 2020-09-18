@@ -1,0 +1,11 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# rafa
+vendor
+composer.lock
+
+# dev
+.DS_Store
+.idea
+*.todo

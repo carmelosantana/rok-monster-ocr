@@ -1,0 +1,8 @@
+{
+    "require": {
+        "league/color-extractor": "0.3.*",
+        "thiagoalessio/tesseract_ocr": "^2.6",
+        "wujunze/php-cli-color": "dev-master",
+        "php-ffmpeg/php-ffmpeg": "^0.13.0"
+    }
+}
