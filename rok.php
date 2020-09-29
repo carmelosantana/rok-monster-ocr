@@ -5,20 +5,21 @@ require_once __DIR__ . '/vendor/autoload.php';
 defined('ROK_VER') or define('ROK_VER', 0.01);
 defined('ROK_PATH') or define('ROK_PATH', __DIR__);
 defined('ROK_PATH_APP') or define('ROK_PATH_APP', ROK_PATH . '/app');
+defined('ROK_PATH_IMG_MASK') or define('ROK_PATH_IMG_MASK', ROK_PATH . '/images/mask');
+defined('ROK_PATH_IMG_TEMPLATE') or define('ROK_PATH_IMG_TEMPLATE', ROK_PATH . '/images/template');
 
 // working
-defined('ROK_PATH_BLUESTACKS') or define('ROK_PATH_BLUESTACKS', dirname(dirname(ROK_PATH)) . '/BlueStacks');
-defined('ROK_PATH_WORKING') or define('ROK_PATH_WORKING', dirname(ROK_PATH) . '/.working');
-defined('ROK_PATH_WORKING_TMP') or define('ROK_PATH_WORKING_TMP', ROK_PATH_WORKING . '/tmp');
-defined('ROK_PATH_WORKING_TRASH')	or define('ROK_PATH_WORKING_TRASH', ROK_PATH_WORKING . '/.trash');
+defined('ROK_PATH_INPUT') or define('ROK_PATH_INPUT', dirname(ROK_PATH) . '/input');
+defined('ROK_PATH_OUTPUT') or define('ROK_PATH_OUTPUT', dirname(ROK_PATH) . '/output');
+defined('ROK_PATH_TMP') or define('ROK_PATH_TMP', dirname(ROK_PATH) . '/tmp');
 
 // app
 require_once ROK_PATH_APP . '/app.php';
+require_once ROK_PATH_APP . '/cli.php';
 require_once ROK_PATH_APP . '/ffmpeg.php';
 require_once ROK_PATH_APP . '/lib-cli.php';
 require_once ROK_PATH_APP . '/lib-images.php';
-require_once ROK_PATH_APP . '/images.php';
-require_once ROK_PATH_APP . '/rok.php';
+require_once ROK_PATH_APP . '/lib-text.php';
 
 // start
 rok_init();
