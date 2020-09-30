@@ -1,10 +1,20 @@
 <?php
+use Treinetic\ImageArtist\lib\Image;
+use Treinetic\ImageArtist\lib\PolygonShape;
+use Treinetic\ImageArtist\lib\Text\TextBox;
+use Treinetic\ImageArtist\lib\Text\Color;
+use Treinetic\ImageArtist\lib\Text\Font;
+use Treinetic\ImageArtist\lib\Overlays\Overlay;
+use Treinetic\ImageArtist\lib\Text\Write\WriteFactory;
+use Treinetic\ImageArtist\lib\Text\Write\GDWritingStrategy;
+use Treinetic\ImageArtist\lib\Text\Write\ImagickWritingStrategy;
+
 /**
  * Imagick
  */
 // https://code.i-harness.com/en/q/3e3588
 function imagick_get_dpi(string $file){
-    $cmd = 'identify -quiet -units PixelsPerInch -format "%x" '.$file;       
+    $cmd = 'identify -quiet -units PixelsPerInch -format "%x" "'.$file.'"';       
     $data = @shell_exec(escapeshellcmd($cmd));
     if ( $data == '1' )
         return 72;
@@ -12,20 +22,14 @@ function imagick_get_dpi(string $file){
     return round((int)$data);
 }
 
-function imagick_convert_dpi(string $file, $dpi=72){
-    $cmd = 'convert '.$file.' -set units PixelsPerInch -density '.$dpi.' '.$file;
+function imagick_convert_dpi(string $file, string $output, $dpi=72){
+    $cmd = 'convert "'.$file.'" -set units PixelsPerInch -density '.$dpi.' "'.$output.'"';
     $data = @shell_exec(escapeshellcmd($cmd));
     return $data;
 }
 
-function imagick_convert_gray(string $file){
-	if ( cli_get_arg('debug') ){
-		$cmd = 'convert -colorspace gray -modulate 120 -gaussian-blur 1 -negate -modulate 120 '.$file.' '.str_replace('frame-', 'clean-', $file);
-
-	} else {
-		$cmd = 'convert -colorspace gray -modulate 120 -gaussian-blur 1 -negate -modulate 120 '.$file.' '.$file;
-
-	}
+function imagick_convert_gray(string $file, string $output){
+	$cmd = 'convert -colorspace gray -modulate 120 -gaussian-blur 1 -negate -modulate 120 "'.$file.'" "'.$output.'"';
     $data = @shell_exec(escapeshellcmd($cmd));
     return $data;
 }
@@ -103,4 +107,30 @@ function image_compare_get_distortion($image_path_1=null, $image_path_2=null){
 	$result = $image1->compareImages($image2,Imagick::METRIC_MEANABSOLUTEERROR);
 	$p1 = $image1->getImageProperties();
 	return $p1['distortion'];
+}
+
+function image_add_mask_ia($file1, $file2, $output, $scale=null){
+	$img1 = new Image($file1);
+	$img2 = new Image($file2);
+
+	$img2->merge($img1, 0, 0);
+	
+	$img2->save($output, IMAGETYPE_PNG);	
+}
+
+function image_crop(string $file, string $output){
+	$image = new Image($file);
+
+	$image->crop(950, 250, 1120, 700);
+
+	$image->save($output, IMAGETYPE_PNG);	
+}
+
+function image_scale(string $file, string $output, int $scale){
+	$image = new Image($file);
+
+	if ( $scale )
+		$image->scale($scale);
+
+	$image->save($output, IMAGETYPE_PNG);	
 }
