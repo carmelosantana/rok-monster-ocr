@@ -63,6 +63,10 @@ function rok_do_ocr(array $args){
 			continue;
 		}
 
+		// skip non image formats
+		if ( !in_array(pathinfo($file)['extension'], ['jpg', 'jpeg', 'png']) )
+			continue;
+
 		// persistent
 		$count++;
 		cli_echo(basename($file), array('header' => $count));
