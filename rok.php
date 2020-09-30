@@ -6,7 +6,7 @@ defined('ROK_VER') or define('ROK_VER', 0.01);
 defined('ROK_PATH') or define('ROK_PATH', __DIR__);
 defined('ROK_PATH_APP') or define('ROK_PATH_APP', ROK_PATH . '/app');
 defined('ROK_PATH_IMG_MASK') or define('ROK_PATH_IMG_MASK', ROK_PATH . '/images/mask');
-defined('ROK_PATH_IMG_TEMPLATE') or define('ROK_PATH_IMG_TEMPLATE', ROK_PATH . '/images/template');
+defined('ROK_PATH_IMG_SAMPLE') or define('ROK_PATH_IMG_SAMPLE', ROK_PATH . '/images/sample');
 
 // working
 defined('ROK_PATH_INPUT') or define('ROK_PATH_INPUT', dirname(ROK_PATH) . '/input');
