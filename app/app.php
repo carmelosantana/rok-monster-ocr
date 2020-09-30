@@ -17,6 +17,7 @@ function rok_do_ocr(array $args){
 		'image_process' => true,
 		'gray' => false,
 		'scale' => null,
+		'distortion' => '0.05',
 
 		// TesseractOCR
 		// 0, 4, 11, 12
@@ -67,34 +68,37 @@ function rok_do_ocr(array $args){
 		cli_echo(basename($file), array('header' => $count));
 
 		// file hash
-		$hash = md5($file.json_encode($args));
+		$hash = md5($file.json_encode($args).filectime($file).filectime($template['mask']));
 		$cached_file = ROK_PATH_TMP . '/' . $hash . '.png';
 
 		// image processing
 		if ( $image_process ){
 			// add mask
-			if ( !is_file($cached_file) )
-				image_add_mask_ia($template['mask'], $file, $cached_file);
+			image_add_mask_ia($template['mask'], $file, $cached_file);
 
 			// compare reference image or drop
 			$dist = image_compare_get_distortion($cached_file, $template['sample']);
-			if ( $dist <= '0.06' ){
+			cli_echo('Distortion: ' . $dist);
+			if ( $dist <= $distortion ){
 				cli_echo('Skip...');
 				echo PHP_EOL;
 				continue;
 			}
-			cli_echo('Distortion: ' . $dist);
 
-			// enlarge and crop
-			if ( !is_file($cached_file) )
-				image_scale_crop($cached_file, $cached_file, $scale);
+			// crop
+			if ( $crop )
+				image_crop($cached_file, $cached_file, $crop);
+
+			// enlarge
+			if ( $scale )
+				image_scale($cached_file, $cached_file, $scale);
 
 			// grayscale?
 			if ( $gray )
 				imagick_convert_gray($cached_file, $cached_file);
 			
 			// convert image to 300 dpi before processing
-			if ( imagick_get_dpi($cached_file) < 300 )
+			if ( $dpi and imagick_get_dpi($cached_file) < 300 )
 				imagick_convert_dpi($cached_file, $cached_file, 300, $scale);
 		}
 
