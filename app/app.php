@@ -99,7 +99,7 @@ function rok_do_ocr(array $args){
 
 		// persistent
 		$count++;
-		cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'green']) . ' #' . $count);
+		cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'light_green']) . ' #' . $count);
 
 		// match image to sample retrieve templates
 		if ( $compare_to_sample ){
@@ -111,13 +111,13 @@ function rok_do_ocr(array $args){
 				cli_echo('Distortion: ' . $image_distortion);
 				
 				// does not match a template
-				if ( $image_distortion >= $sample_dist ){
+				if ( $image_distortion >= ($distortion ? $distortion : $sample_dist) ){
 					continue;
 	
 				} else {
 					// matched
 					$match = true;
-					cli_echo('Match:' . $sample, ['fg' => 'green']);
+					cli_echo('Match: ' . $sample, ['fg' => 'light_green']);
 				}	
 			}
 		}
@@ -202,9 +202,11 @@ function rok_do_ocr(array $args){
 	rok_cli_table(($profile['table']??null), $data);
 
 	// csv
-	$csv_file = ROK_PATH_OUTPUT . '/' . $job . '-' . time() . '.csv';
-	if ( !rok_build_csv($data, $profile['csv_headers'], $csv_file) )
-		die("Can't close php://output");
+	if ( isset($profile['csv_headers']) ){
+		$csv_file = ROK_PATH_OUTPUT . '/' . $job . '-' . time() . '.csv';
+		if ( !rok_build_csv($data, $profile['csv_headers'], $csv_file) )
+			cli_echo("Can't close php://output", ['header' => 'error']);
+	}
 }
 
 // make CSV
