@@ -1,59 +1,15 @@
 <?php
-// use
-use thiagoalessio\TesseractOCR\TesseractOCR;
-use Treinetic\ImageArtist\lib\Image;
+use jc21\CliTable;
+use jc21\CliTableManipulator;
 
-/**
-	// Setup
-	1. Navigate to DIR
-	2. $ composer install 
-
-	// builds a sample index.php at 4 seconds
-	php esopower-cli.php  --dataset=inventory --screencap=single --ss=00:00:04.00 --sample=1
-
-	// rebuilds all thumbs
-	php esopower-cli.php  --dataset=inventory --screencap=1 --sample=1
-
-	// rebuilds all thumbs
-	php esopower-cli.php  --clear=1 --data=inventory --screencap=1 --sample=1
-
-	// screenshot every frame
-	ffmpeg -i withdraw.flv thumb%04d.png -hide_banner
-
-	// screenshot every keyframe
-	ffmpeg -i withdraw.flv -vf "select=eq(pict_type\,I)" -vsync vfr thumb%04d.png -hide_banner
-	ffmpeg -i withdraw.flv -vf "select=eq(pict_type\,I)",scale=720:-1,tile -frames:v 1 -vsync vfr mosiac.png -hide_banner
-
-	// This will create a mosaic composed of the first scenes, and it looks like this:
-	ffmpeg -i withdraw.flv -vf select='gt(scene\,0.4)',scale=160:120,tile -frames:v 1 withdraw-mosaic.png
-	ffmpeg -ss 00:00:05 -i withdraw.flv -frames 1 -vf "select=not(mod(n\,400)),scale=160:120,tile=4x3" withdraw-mosaic.png
-
-	// https://stackoverflow.com/questions/3827611/ffmpeg-to-capture-screenshot-from-a-video-file-in-a-fine-time-unit#4576802
-	ffmpeg -ss 00:00:01.01 -i withdraw.flv -y -f image2 \
-	 -vframes 1 withdraw.png
-	ffmpeg -ss 00:00:01.01 -i withdraw.flv -f image2 -vframes 1 withdraw-index.png
-
-	// scaled screenshot
-	ffmpeg -ss 00:10:20 -t 1 -s 400x300 -i <INPUT_FILE> -f mjpeg <OUTPUT_FILE>
-
-	// helpfull
-	- ffmpeg
-	https://unix.stackexchange.com/questions/190431/convert-a-video-to-a-fixed-screen-size-by-cropping-and-resizing#192021
-	https://www.bugcodemaster.com/article/crop-video-using-ffmpeg	
-	- resize images
-	https://www.imagemagick.org/discourse-server/viewtopic.php?t=18241
-	- compare images
-	https://www.imagemagick.org/discourse-server/viewtopic.php?t=20761&start=15
-*/
 // logo
 function rok_cli_logo($style=true){
 	$logo = '
  _____     _____    _____             _           
 | __  |___|  |  |  |     |___ ___ ___| |_ ___ ___ 
 |    -| . |    -|  | | | | . |   |_ -|  _| -_|  _|
-|__|__|___|__|__|  |_|_|_|___|_|_|___|_| |___|_| ';
-	$desc = '
- Data aggregator and analysis tools.' . PHP_EOL . PHP_EOL;
+|__|__|___|__|__|  |_|_|_|___|_|_|___|_| |___|_| ' . PHP_EOL;
+	$desc = 'Data aggregator and analysis tools.' . PHP_EOL . PHP_EOL;
 
     $version = 'v' . ROK_VER . PHP_EOL;
 
@@ -67,12 +23,16 @@ function rok_cli_logo($style=true){
 function rok_init(){
 	// @important for padding
 	mb_internal_encoding('utf-8');
-
+	
 	// get args
 	cli_parse_get();
 
 	// setup php
     cli_php_setup();
+
+	// cleanup
+	if ( _get('purge', true) )
+		rok_purge_tmp();
 
 	// welcome
 	rok_cli_text('logo_version');
@@ -89,33 +49,21 @@ function rok_bin(array $args=[]){
 	// change DIR
 	chdir(ROK_PATH_TMP);
 
-	// args to vars
+	// defaults
 	$def = [
-        'input_path' => cli_get_arg('input_path', ROK_PATH_INPUT),
-        'job' => cli_get_arg('job'),
-        
-        // output
-        'echo' => cli_get_arg('echo', false),
-	];
-    $args = cli_parse_args($args, $def);
+        'job' => null,
+        'echo' => false,
+    ];
+
+    // merge with defaults if passed while loading
+    $args = cli_parse_args($_GET, $def);
+
+    // add CLI args
+    $args = array_merge($args, $_GET);    
 
 	// perform set of actions
 	switch ( $args['job'] ){
-		case 'governor_profile_kills':
-			$job_args = [
-				'dataset' => 'governor_profile_kills',
-                
-				// ocr
-				'raw' => true,
-				'oem' => 3,
-				'psm' => 11,
-                'gray' => false,
-                'scale' => false,
-                'crop' => false,
-                'dpi' => false,
-				'image_process' => true,
-			];
-            $args = cli_parse_args($args, $job_args);
+        case 'governor_more_info':
             rok_do_ocr($args);
 		break;
 
@@ -184,18 +132,15 @@ function rok_cli_help(){
 	cli_echo_array($schema, false, array('footer' => true));	
 }
 
-function rok_working_dir_init($purge=false){
-    // cleanup 
-	if ( cli_get_arg('purge', $purge) ){
-		if ( cli_rmdirr(ROK_PATH_WORKING_TMP) )
-			cli_echo(cli_txt_color('✖') . ' Deleted ' . cli_txt_color(ROK_PATH_WORKING_TMP, ['fg' => 'yellow']));
+function rok_cli_table($schema=null, $data=null){
+	if ( !$schema )
+		return false;
 
-		if ( cli_rmdirr(ROK_PATH_WORKING_TRASH) )
-			cli_echo(cli_txt_color('✖') . ' Deleted ' . cli_txt_color(ROK_PATH_WORKING_TRASH, ['fg' => 'yellow']));
-	}
-
-    // make DIR, happens after cleanup
-    cli_mkdir(ROK_PATH_WORKING, 1);
-    cli_mkdir(ROK_PATH_WORKING_TMP, 1);
-    cli_mkdir(ROK_PATH_WORKING_TRASH, 1);	
+	$table = new CliTable;
+	$table->setTableColor('blue');
+	$table->setHeaderColor('cyan');
+	foreach ( $schema as $tbl_schema )
+		$table->addField($tbl_schema[0], $tbl_schema[1], ($tbl_schema[2] ? new CliTableManipulator($tbl_schema[2]) : false), $tbl_schema[3]);
+	$table->injectData($data);
+	$table->display();	
 }
