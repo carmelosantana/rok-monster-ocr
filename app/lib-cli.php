@@ -47,6 +47,7 @@ function cli_echo($msg=null, $args=array()){
         switch ($args['header']) {
             case 'error':
                 $out = _cli_echo_padding($msg, $args);
+                die();
                 break;
 
              case 'debug':

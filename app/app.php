@@ -1,214 +1,252 @@
 <?php
-// use
 use thiagoalessio\TesseractOCR\TesseractOCR;
-use jc21\CliTable;
+use Treinetic\ImageArtist\lib\Image;
 
+/*
+	PSM 
+	0    Orientation and script detection (OSD) only.
+	1    Automatic page segmentation with OSD.
+	2    Automatic page segmentation, but no OSD, or OCR.
+	3    Fully automatic page segmentation, but no OSD. (Default)
+	4    Assume a single column of text of variable sizes.
+	5    Assume a single uniform block of vertically aligned text.
+	6    Assume a single uniform block of text.
+	7    Treat the image as a single text line.
+	8    Treat the image as a single word.
+	9    Treat the image as a single word in a circle.
+	10    Treat the image as a single character.
+	11    Sparse text. Find as much text as possible in no particular order.
+	12    Sparse text with OSD.
+	13    Raw line. Treat the image as a single text line, bypassing hacks that are Tesseract-specific.
+
+	OCR engine mode	Working description
+	0	Legacy engine only
+	1	Neural net LSTM only
+	2	Legacy + LSTM mode only
+	3	By Default, based on what is currently available	
+*/
 function rok_do_ocr(array $args){
 	// def
 	$def = array(
 		// files
-		'input_path' => null,
+		'input_path' => ROK_PATH_INPUT,
 		'output_path' => null,
+		'dir' => null,	// sub dir
 		'offset' => 0,
 		'limit' => -1,
-		'echo' => 1,
 
 		// image processing
-		'image_process' => true,
-		'gray' => false,
-		'scale' => null,
-		'distortion' => '0.05',
+		'video' => true,
+		'compare_to_sample' => true,
+		'distortion' => 0,
 
 		// TesseractOCR
-		// 0, 4, 11, 12
-		'oem' => 3,
-		'psm' => 12,
+		'oem' => 0,
+		'psm' => 7,
+		'build_user_words' => false,
 	);
 
 	// args to vars
     $args = cli_parse_args($args, $def);
 	extract($args);
 
-	// error checks
-	if ( !$input_path or !is_dir($input_path) )
-		cli_echo('rok_action_process_images() - DIR does not exist ' . $input_path, array('header' => 'error'));
-	if ( !$dataset )
-		cli_echo('rok_action_process_images() - Missing --dataset', array('header' => 'error'));
+	// files
+	$files_input = $files_ocr = null;
 
-	// vars
+	if ( !$job )
+		cli_echo('rok_do_ocr() - Missing --job', array('header' => 'error'));
+		
+	cli_echo('Starting '.$job, array('format' => 'bold'));
+
+	// dir
+	if ( $dir )
+		$input_path.= '/' . $dir;
+
+	$files_input = rok_get_files($input_path);
+
+	// parse videos into frames
+	if ( $video ){
+		$count = 0;
+		foreach ($files_input as $file) {
+			if ( !is_file($file) ) continue;	// maybe we've already removed this file
+			if ( is_dot_file($file) ) continue;	// manually SKIP_DOTS
+	
+			// skip non video formats
+			if ( !in_array(pathinfo($file)['extension'], ['mp4', 'avi', 'mkv', 'mov']) )  continue;
+	
+			$count++;
+			cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'green']) . ' ' . $count);
+	
+			rok_do_ffmpeg_cmd(['action' => 'interesting', 'input' => $file, 'output' => ROK_PATH_TMP, 'frames' => rok_get_config('frames')]);
+		}
+	}
+
+	// start vars
 	$data = [];
-	$output = null;
 	$count = 0;
 
-	// files
-	$files = sort_filesystem_iterator($input_path, $offset, $limit);
-
-	// comparing images
-	cli_echo('Processing OCR (' . $dataset . ')', array('format' => 'bold'));
-	cli_echo('Files found: '. count($files));
-
-	// template
-	if ( !$template = rok_get_template($dataset) )
-		cli_echo('rok_do_ocr() - Missing --template', array('header' => 'error'));
-
-	foreach ($files as $file) {
-		// maybe we've already removed this file
-		if ( !is_file($file) )
-			continue;
-
-		// manually SKIP_DOTS
-		if ( is_dot_file($file) ){
-			$mv = $files_mv_path.'/'.basename($file);				
-			rename($file, $mv);			
-			continue;
-		}
+	// if not set, try tmp DIR
+	if ( !$files_ocr )
+		$files_ocr = rok_get_files(ROK_PATH_TMP, $limit, $offset);
+	
+	// process each image file
+	foreach ($files_ocr as $file) {
+		if ( !is_file($file) ) continue;	// maybe we've already removed this file
+		if ( is_dot_file($file) ) continue;	// manually SKIP_DOTS
 
 		// skip non image formats
-		if ( !in_array(pathinfo($file)['extension'], ['jpg', 'jpeg', 'png']) )
-			continue;
+		if ( !in_array(pathinfo($file)['extension'], ['jpg', 'jpeg', 'png']) ) continue;
 
 		// persistent
 		$count++;
-		cli_echo(basename($file), array('header' => $count));
+		cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'light_green']) . ' #' . $count);
 
-		// file hash
-		$hash = md5($file.json_encode($args).filectime($file).filectime($template['mask']));
-		$cached_file = ROK_PATH_TMP . '/' . $hash . '.png';
+		// match image to sample retrieve templates
+		if ( $compare_to_sample ){
+			$match = false;
+			rok_get_config('samples')[$job] ?? die();
+			foreach ( rok_get_config('samples')[$job] as $sample => $sample_dist ){
+				$image_distortion = image_compare_get_distortion($file, rok_get_public_images($sample, 'sample'));
 
-		// image processing
-		if ( $image_process ){
-			// add mask
-			image_add_mask_ia($template['mask'], $file, $cached_file);
-
-			// compare reference image or drop
-			$dist = image_compare_get_distortion($cached_file, $template['sample']);
-			cli_echo('Distortion: ' . $dist);
-			if ( $dist <= $distortion ){
-				cli_echo('Skip...');
-				echo PHP_EOL;
-				continue;
+				cli_echo('Distortion: ' . $image_distortion);
+				
+				// does not match a template
+				if ( $image_distortion >= ($distortion ? $distortion : $sample_dist) ){
+					continue;
+	
+				} else {
+					// matched
+					$match = true;
+					cli_echo('Match: ' . $sample, ['fg' => 'light_green']);
+				}	
 			}
-
-			// crop
-			if ( $crop )
-				image_crop($cached_file, $cached_file, $crop);
-
-			// enlarge
-			if ( $scale )
-				image_scale($cached_file, $cached_file, $scale);
-
-			// grayscale?
-			if ( $gray )
-				imagick_convert_gray($cached_file, $cached_file);
-			
-			// convert image to 300 dpi before processing
-			if ( $dpi and imagick_get_dpi($cached_file) < 300 )
-				imagick_convert_dpi($cached_file, $cached_file, 300, $scale);
+		}
+	
+		// if no match to sample skip input file
+		if ( !$match ){
+			cli_echo('Skip...', ['fg' => 'yellow']);
+			echo PHP_EOL;	
+			continue;
 		}
 
-		// ocr
-		$ocr = (new TesseractOCR($cached_file))
-			// config
-			// ->config('load_freq_dawg', 'false')
-			
-			// english
-			// ->lang('eng')
+		if ( !$profile = rok_get_config($sample) )
+			cli_echo('rok_do_ocr() - Missing --job profile', array('header' => 'error'));
 
-			// our dictionary
-			// ->userWords(ROK_PATH_USERWORDS . '/full.txt')
-			// ->whitelist(range('a', 'z'), range(0, 9), '-_@')
-
-            // TESTING:
-            ->oem($oem)       
-			->psm($psm)
-			// ->config('tessedit_write_images', $tessedit_write_images)
-
-			// lets go!
-		    ->run();
-		
-		cli_echo('OCR: ' . basename($cached_file));
-		
-		// cleanup routine
-	    $ocr_clean = text_remove_extra_lines($ocr);
-
-		// start entry
-		$data[$hash] = [
-			'image' => $file,
-			'image_ocr' => $cached_file,
-			'created' => date("F d Y H:i:s.", filectime($file)),
-			'ocr' => explode(PHP_EOL, $ocr_clean),
+		// start data for file
+		$tmp = [
+			'_image' => basename($file),
+			'_created' => date('m-d-Y H:i:s', filectime($file)),
+			'_distortion' => $image_distortion ?? null,
 		];
 
-		// output
-		if ( $echo )
-			echo $ocr_clean;
+		// slice image for parts
+		$images = [];
+		foreach ( $profile['ocr_schema'] as $key => $schema ){
+			// init for further use
+			$tmp[$key] = null;
 
-		echo PHP_EOL;	
+			// skip img process if no crop available
+			if ( empty($schema['crop']) )
+				continue;
+
+			// cut image for this key
+			$images[$key] = ROK_PATH_TMP . '/' . md5($key.$file) . '.png';
+			image_crop($file, $images[$key], $schema['crop']);
+		}
+
+		// ocr each image part
+		foreach ( $images as $key => $image ){
+			// ocr
+			$ocr = (new TesseractOCR($image))
+				->configFile(($profile['ocr_schema'][$key]['config']??null))
+				->whitelist(($profile['ocr_schema'][$key]['whitelist']??null))
+				// language, bug with rus
+				// ->lang('eng','ara','chi_sim','chi_tra','fra','deu','ind','ita','jpn','kor','msa','por','rus','spa','spa_old','tha','tur', 'vie')
+				->lang('eng', 'jpn')
+
+				// our dictionary
+				// ->userWords(ROK_PATH_INPUT . '/words.txt')
+				// ->userPatterns(ROK_PATH_INPUT . '/patterns.txt')
+
+				// TESTING:
+				->oem($oem)       
+				->psm($psm)
+
+				// lets go!
+				->run();
+			
+			cli_echo('OCR: ' . $key . ' ' . cli_txt_style(basename($image), ['fg' => 'light_gray']));
+			$tmp[$key] = text_remove_extra_lines($ocr);
+
+			if ( isset($profile['ocr_schema'][$key]['callback']) and function_exists($profile['ocr_schema'][$key]['callback']) )
+				$tmp[$key] = $profile['ocr_schema'][$key]['callback']($tmp[$key]);
+
+			if ( $echo )
+				echo $tmp[$key] . PHP_EOL;
+		}
+
+		// add entry to others
+		$data[] = $tmp;
+
+		// space for next
+		echo PHP_EOL;
 	}
 
-	// format for output
-	$formatted = [];
-	foreach ( $data as $hash => $meta ){
-		$tmp = [
-			'hash' => $hash,
-			'created' => $meta['created'],
-		];
-		if ( $meta['ocr'][0] != 'Governor' )
-			continue;
-		
-		foreach ( $template['ocr_schema'] as $name => $key ){
-			$tmp[$name] = $meta['ocr'][$key] ?? null;
-		}
-		
-		$formatted[] = $tmp;
+	// add user words
+	if ( $build_user_words ){
+		$user_words_file = ROK_PATH_OUTPUT . '/' . $job . '-user-words.txt';
+		rok_ocr_build_user_words($user_words, ['name'], $user_words_file);
 	}
 
 	// table output
-	$table = new CliTable;
-	$table->setTableColor('blue');
-	$table->setHeaderColor('cyan');
-	foreach ( $template['table'] as $tbl_schema )
-		$table->addField($tbl_schema[0], $tbl_schema[1], $tbl_schema[2], $tbl_schema[3]);
-	$table->injectData($formatted);
-	$table->display();
+	rok_cli_table(($profile['table']??null), $data);
+
+	// csv
+	if ( isset($profile['csv_headers']) ){
+		$csv_file = ROK_PATH_OUTPUT . '/' . $job . '-' . time() . '.csv';
+		if ( !rok_build_csv($data, $profile['csv_headers'], $csv_file) )
+			cli_echo("Can't close php://output", ['header' => 'error']);
+	}
+}
+
+// make CSV
+function rok_build_csv($data, $headers, $output){
+	if ( !$headers or empty($headers) )
+		$headers = array_keys($data[0]);
 	
+	// build csv
+	$csv = [];
+	foreach($data as $row) {
+		$tmp = [];
+		foreach ( array_values($headers) as $key )
+			$tmp[] = $row[$key] ?? '';
+
+		$csv[] = $tmp;
+	}
+
+	// make file name if non exist
+	if ( !$output )
+		$output = ROK_PATH_OUTPUT . '/' . time() . '.csv';
+
 	// save to CSV
-	$file_output = ROK_PATH_OUTPUT . '/' . $dataset . '-' . time() . '.csv';
-	$fp = fopen($file_output, 'w');
-	fputcsv($fp, array_keys($formatted[0]));
-	foreach($formatted as $row) {
+	$fp = fopen($output, 'w');
+	fputcsv($fp, array_keys($headers));
+	foreach($csv as $row) {
 		fputcsv($fp, $row);
 	}
-	fclose($fp) or die("Can't close php://output");	
+	return fclose($fp);		
 }
 
-function rok_get_template(string $option){
-	return rok_define_templates()[$option] ?? false;
-}
-
-function rok_define_templates(){
-	return [
-		'governor_profile_kills' => [
-			'ocr_schema' => [
-				'name' => 1,
-				'kills' => 2,
-				't1' => 3,
-				't2' => 4,
-				't3' => 5,
-				't4' => 6,
-				't5' => 7
-			],
-			'table' => [
-				['Name', 'name', false, 'white'],
-				['Kills', 'kills', false, 'white'],
-				['T1', 't1', false, 'white'],
-				['T2', 't2', false, 'white'],
-				['T3', 't3', false, 'white'],
-				['T4', 't4', false, 'white'],
-				['T5', 't5', false, 'white'],
-			],
-			'mask' => ROK_PATH_IMG_MASK . '/governor-profile-kills.png',
-			'sample' => ROK_PATH_IMG_MASK . '/governor-profile-kills.png'
-		]
-	];	
+// build user words
+function rok_ocr_build_user_words($data, $keys, $output){
+	foreach ( $data as $entry ) {
+		foreach ( $keys as $key ) {
+			if ( isset($entry[$key]) )
+				$user_words[] = $entry[$key];
+		}
+	}
+	
+	// save user words to file
+	$output = ROK_PATH_OUTPUT . '/' . $job . '-user-words.txt';
+	file_put_contents($output, implode(PHP_EOL, $user_words));
 }

@@ -118,10 +118,10 @@ function image_add_mask_ia($file1, $file2, $output, $scale=null){
 	$img2->save($output, IMAGETYPE_PNG);	
 }
 
-function image_crop(string $file, string $output){
+function image_crop(string $file, string $output, array $crop){
 	$image = new Image($file);
 
-	$image->crop(950, 250, 1120, 700);
+	$image->crop($crop[0], $crop[1], $crop[2], $crop[3]);
 
 	$image->save($output, IMAGETYPE_PNG);	
 }
