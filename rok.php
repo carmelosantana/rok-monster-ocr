@@ -9,6 +9,7 @@ defined('ROK_PATH_IMAGES') or define('ROK_PATH_IMAGES', ROK_PATH . '/images');
 
 // app
 require_once ROK_PATH . '/config.php';
+file_exists(require_once ROK_PATH . '/my-config.php') or require_once ROK_PATH . '/my-config.php';
 require_once ROK_PATH_APP . '/app.php';
 require_once ROK_PATH_APP . '/cli.php';
 require_once ROK_PATH_APP . '/ffmpeg.php';
