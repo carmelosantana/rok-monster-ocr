@@ -104,9 +104,6 @@ $rok_config = [
             ['T3', 't3', 'nicenumber', 'white'],
             ['T4', 't4', 'nicenumber', 'white'],
             ['T5', 't5', 'nicenumber', 'white'],
-            // ['%', '_distortion', false, 'white'],
-            // ['File', '_image', false, 'white'],
-            //['Date', '_created', false, 'white'],
         ],
     ],
 ];
