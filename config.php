@@ -12,7 +12,7 @@ $rok_config = [
     'height' => 1080,
 
     // when to capture
-    'frames' => 90,
+    'frames' => 45,
 
     // job and app settings
     'purge' => 1,   // delete tmp dir on new start
