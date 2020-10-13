@@ -1,9 +1,4 @@
 <?php
-// Path for media and working tmp
-defined('ROK_PATH_INPUT') or define('ROK_PATH_INPUT', dirname(ROK_PATH) . '/input');
-defined('ROK_PATH_OUTPUT') or define('ROK_PATH_OUTPUT', dirname(ROK_PATH) . '/output');
-defined('ROK_PATH_TMP') or define('ROK_PATH_TMP', dirname(ROK_PATH) . '/tmp');
-
 // Jobs and media config
 global $rok_config;
 $rok_config = [
@@ -12,7 +7,7 @@ $rok_config = [
     'height' => 1080,
 
     // when to capture
-    'frames' => 90,
+    'frames' => 45,
 
     // job and app settings
     'purge' => 1,   // delete tmp dir on new start
@@ -43,7 +38,7 @@ $rok_config = [
             ],
             'power' => [
                 'whitelist' => range(0, 9),
-                'crop' => [975, 168, 216, 35],
+                'crop' => [980, 168, 216, 35],
                 'callback' => 'text_remove_non_numeric',
             ],
             'kills' => [

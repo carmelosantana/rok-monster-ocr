@@ -61,15 +61,13 @@ function rok_bin(array $args=[]){
     // add CLI args
     $args = array_merge($args, $_GET);    
 
-	// perform set of actions
-	switch ( $args['job'] ){
-        case 'governor_more_info':
-            rok_do_ocr($args);
-		break;
+	// run job if defined
+	if ( isset(rok_get_config('samples')[$args['job']]) ){
+		rok_do_ocr($args);
 
-		default:
-			rok_cli_help();
-			break;	
+	} else {
+		rok_cli_help();
+
 	}
 }
 
