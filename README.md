@@ -44,7 +44,7 @@ Here's a quick break down of what happens during application execution for job `
     ```
 
     The hashed image is the cropped image segment. These files are considered temporary and are purged on each new run.
-   3. If provided a callback function will further process this single data point.
+    3. If provided a callback function will further process this single data point.
 3. Data is structured per the profile and prepared for output, in this case a CSV.
 4. A table prints with the data formatted per the previously loaded profile.
 
