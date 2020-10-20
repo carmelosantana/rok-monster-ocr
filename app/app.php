@@ -28,10 +28,13 @@ use Treinetic\ImageArtist\lib\Image;
 function rok_do_ocr(array $args){
 	// def
 	$def = array(
+		// what are we doing
+		'job' => null,
+
 		// files
+		'input' => null, // file append to path
 		'input_path' => ROK_PATH_INPUT,
 		'output_path' => null,
-		'dir' => null,	// sub dir
 		'offset' => 0,
 		'limit' => -1,
 
@@ -50,35 +53,50 @@ function rok_do_ocr(array $args){
     $args = cli_parse_args($args, $def);
 	extract($args);
 
-	// files
-	$files_input = $files_ocr = null;
-
+	// always check if job is provided, if not config lookup will fail
 	if ( !$job )
 		cli_echo('rok_do_ocr() - Missing --job', array('header' => 'error'));
 		
 	cli_echo('Starting '.$job, array('format' => 'bold'));
 
-	// dir
-	if ( $dir )
-		$input_path.= '/' . $dir;
+	// files to send to ocr loop
+	$files_ocr = null;
+	$input_path.= $input ? '/' . $input : null;
 
-	$files_input = rok_get_files($input_path);
+	// check if single file or path to dir
+	if ( is_file($input_path) ){
+		switch ( pathinfo($input_path)['extension'] ){
+			case 'jpg':
+			case 'jpeg':
+			case 'png':
+				$files_ocr = [$input_path];
+				$video = false;
+			break; 
+	
+			case 'avi':
+			case 'mkv':
+			case 'mp4':
+				$files_input = [$input_path];
+				$video = true;
+			break;
+
+			default:
+				cli_echo('rok_do_ocr() - Problem with file $files_input ' . $files_input, array('header' => 'error'));
+			break;
+		}
+
+	} elseif ( is_dir($input_path) ){
+		$files_input = rok_get_files($input_path);
+
+	} else {
+		cli_echo('rok_do_ocr() - Missing $input_path', array('header' => 'error'));
+
+	}
 
 	// parse videos into frames
-	if ( $video ){
-		$count = 0;
-		foreach ($files_input as $file) {
-			if ( !is_file($file) ) continue;	// maybe we've already removed this file
-			if ( is_dot_file($file) ) continue;	// manually SKIP_DOTS
-	
-			// skip non video formats
-			if ( !in_array(pathinfo($file)['extension'], ['mp4', 'avi', 'mkv', 'mov']) )  continue;
-	
-			$count++;
-			cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'green']) . ' ' . $count);
-	
-			rok_do_ffmpeg_cmd(['action' => 'interesting', 'input' => $file, 'output' => ROK_PATH_TMP, 'frames' => rok_get_config('frames')]);
-		}
+	if ( $video ){ 
+		rok_video_find_scene_change($files_input, ROK_PATH_TMP);
+		$files_ocr = rok_get_files(ROK_PATH_TMP);
 	}
 
 	// start vars
@@ -87,7 +105,7 @@ function rok_do_ocr(array $args){
 
 	// if not set, try tmp DIR
 	if ( !$files_ocr )
-		$files_ocr = rok_get_files(ROK_PATH_TMP, $limit, $offset);
+		cli_echo('rok_do_ocr() - Missing $files_ocr', array('header' => 'error'));
 	
 	// process each image file
 	foreach ($files_ocr as $file) {
@@ -206,6 +224,23 @@ function rok_do_ocr(array $args){
 		$csv_file = ROK_PATH_OUTPUT . '/' . $job . '-' . time() . '.csv';
 		if ( !rok_build_csv($data, $profile['csv_headers'], $csv_file) )
 			cli_echo("Can't close php://output", ['header' => 'error']);
+	}
+}
+
+// find interesting scenes
+function rok_video_find_scene_change($files_input){
+	$count = 0;
+	foreach ($files_input as $file) {
+		if ( !is_file($file) ) continue;	// maybe we've already removed this file
+		if ( is_dot_file($file) ) continue;	// manually SKIP_DOTS
+
+		// skip non video formats
+		if ( !in_array(pathinfo($file)['extension'], ['mp4', 'avi', 'mkv', 'mov']) )  continue;
+
+		$count++;
+		cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'green']) . ' ' . $count);
+
+		rok_do_ffmpeg_cmd(['action' => 'interesting', 'input' => $file, 'output' => ROK_PATH_TMP, 'frames' => rok_get_config('frames')]);
 	}
 }
 
