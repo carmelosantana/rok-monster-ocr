@@ -80,7 +80,7 @@ function cli_echo($msg=null, $args=array()){
     }
         
     // cya buddy
-    if ( $exit or $args['header'] == 'error' )
+    if ( $exit and is_cli() )
         die(PHP_EOL);
 
     // just return it
@@ -522,7 +522,7 @@ function has_next(array $_array) {
 }
 
 function is_cli(){
-    if ( isset($_SERVER) and isset($_SERVER['HTTP_USER_AGENT']) and $_SERVER['HTTP_USER_AGENT'] )
+    if ( php_sapi_name() == "cli" )
         return true;
 
     return false;
