@@ -6,7 +6,7 @@ function rok_do_ffmpeg_cmd(array $args){
 
 		// file
 		'input' => null,
-		'output_path' => ROK_PATH_TMP,
+		'output_path' => null,
 
 		// ffmpeg
 		'frames' => 30,
