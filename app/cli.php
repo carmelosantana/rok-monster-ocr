@@ -21,24 +21,26 @@ function rok_cli_logo($style=true){
 
 // init
 function rok_init(){
-	// @important for padding
-	mb_internal_encoding('utf-8');
-	
-	// get args
-	cli_parse_get();
+	if ( is_cli() ){
+		// @important for padding
+		mb_internal_encoding('utf-8');
+		
+		// get args
+		cli_parse_get();
 
-	// setup php
-    cli_php_setup();
+		// setup php
+		cli_php_setup();
 
-	// cleanup
-	if ( _get('purge', true) )
-		rok_purge_tmp();
+		// delete images and cache from previous job
+		if ( cli_get_arg('purge') )
+			rok_purge_tmp();		
+	}
 
 	// welcome
 	rok_cli_text('logo_version');
 
 	// exec
-	rok_bin();
+	rok_bin($args=[]);
 
 	// goodbye
 	rok_cli_text('exit');
@@ -49,26 +51,38 @@ function rok_bin(array $args=[]){
 	// change DIR
 	chdir(ROK_PATH_TMP);
 
+	// vars
+	$output = false;
+
 	// defaults
 	$def = [
         'job' => null,
         'echo' => false,
     ];
 
-    // merge with defaults if passed while loading
-    $args = cli_parse_args($_GET, $def);
+	// merge with defaults if passed while loading
+	if ( empty($args) ){
+	    $args = cli_parse_args($_GET, $def);
 
-    // add CLI args
-    $args = array_merge($args, $_GET);    
+		// add CLI args
+	    $args = array_merge($args, $_GET);    
+
+	// only merge with defaults from external program
+	} else {
+		$args = array_merge($def, $args);
+
+	}
 
 	// run job if defined
 	if ( isset(rok_get_config('samples')[$args['job']]) ){
-		rok_do_ocr($args);
+		$output = rok_do_ocr($args);
 
 	} else {
 		rok_cli_help();
 
 	}
+
+	return $output;
 }
 
 function rok_cli_text($text=null, $echo=true){
