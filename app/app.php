@@ -68,10 +68,10 @@ function rok_do_ocr(array $args){
 	// check if single file or path to dir
 	// TODO: fix single file input
 	if ( is_file($input_path) ){
-		$files_ocr = [$input_path];
+		$args['files_ocr'] = [$input_path];
 
 	} elseif ( is_dir($input_path) ){
-		$files_ocr = rok_get_files_ocr($input_path, $tmp_path);
+		$args['files_ocr'] = rok_get_files_ocr($input_path, $tmp_path);
 
 	} else {
 		cli_echo('rok_do_ocr() - Missing $input_path', array('header' => 'error'));
@@ -79,15 +79,15 @@ function rok_do_ocr(array $args){
 	}
 
 	// if not set, try tmp DIR
-	if ( !isset($files_ocr) or !$files_ocr or empty($files_ocr))
-		cli_echo('rok_do_ocr() - Missing $files_ocr', array('header' => 'error'));
+	if ( !isset($args['files_ocr']) or !$args['files_ocr'] or empty($args['files_ocr']))
+		cli_echo('rok_do_ocr() - Missing $args[\'files_ocr\']', array('header' => 'error'));
 
 	// start vars
 	$data = [];
 	$count = 0;
 	
 	// process each image file
-	foreach ($files_ocr as $file) {
+	foreach ($args['files_ocr'] as $file) {
 		if ( !is_file($file) ) continue;	// maybe we've already removed this file
 		if ( is_dot_file($file) ) continue;	// manually SKIP_DOTS
 
@@ -130,11 +130,13 @@ function rok_do_ocr(array $args){
 			cli_echo('rok_do_ocr() - Missing --job profile', array('header' => 'error'));
 
 		// start data for file
-		$tmp = [
-			'_image' => basename($file),
-			'_created' => date('m-d-Y H:i:s', filectime($file)),
-			'_distortion' => $image_distortion ?? null,
-		];
+		$tmp = [];
+		if ( $debug ){
+			$tmp = [
+				'_image' => basename($file),
+				'_distortion' => $image_distortion ?? null,	
+			];
+		}
 
 		// slice image for parts
 		$images = [];
