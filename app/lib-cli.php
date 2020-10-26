@@ -47,7 +47,6 @@ function cli_echo($msg=null, $args=array()){
         switch ($args['header']) {
             case 'error':
                 $out = _cli_echo_padding($msg, $args);
-                die();
                 break;
 
              case 'debug':
@@ -69,7 +68,7 @@ function cli_echo($msg=null, $args=array()){
     // leave open for progress
     $out.= $progress ? ' [' : PHP_EOL;
 
-    // echo if not surpressed
+    // echo if not suppressed
     if ( $echo )
         echo $out;
     
@@ -81,7 +80,7 @@ function cli_echo($msg=null, $args=array()){
     }
         
     // cya buddy
-    if ( $exit )
+    if ( $exit and is_cli() )
         die(PHP_EOL);
 
     // just return it
@@ -523,7 +522,7 @@ function has_next(array $_array) {
 }
 
 function is_cli(){
-    if ( isset($_SERVER) and isset($_SERVER['HTTP_USER_AGENT']) and $_SERVER['HTTP_USER_AGENT'] )
+    if ( php_sapi_name() == "cli" )
         return true;
 
     return false;

@@ -9,10 +9,6 @@ $rok_config = [
     // when to capture
     'frames' => 45,
 
-    // job and app settings
-    'purge' => 1,   // delete tmp dir on new start
-    'echo' => 0,   // echo every OCR result
-
     // keys to use while building generic user word lists
     'user_words' => [
         'name',
