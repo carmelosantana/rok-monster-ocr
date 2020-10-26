@@ -21,14 +21,14 @@ Command line tools to help construct player statistics from [Rise of Kingdoms](h
 
 ## How it works
 
-Here's a quick break down of what happens during application execution for job `governor-more-info`.
+Here's a quick overview of what happens during application execution for job `governor_more_info`.
 
-1. Screenshots are created from the input video. These screenshots are roughly 45 frames apart and represent the most "interesting" frame of the batch. This will hopefully capture a clear image of the screen that contains the data we're trying to collect.
+1. Screenshots are created from the input video representing the most "interesting" frames. This will hopefully capture a clear image of the screen that contains the data we're trying to collect.
 2. We iterate through each frame and perform the following actions:
-   1. These screenshots are compared to sample images. When a match is found a profile is loaded that contains instructions for further processing.
-   2. The image is cropped per each segment declared in the profile. Each segment represents a single data point we're trying to collect. This is what it looks like after a match is found and data points are read.
+   1. Screenshots are compared to sample images. When a match is found a profile is loaded containing instructions for further processing.
+   2. The image is cropped per each segment declared in the profile. Each segment represents a single data point we're trying to collect. This is an output confirming a match was found and we're trying to capture data.
 
-    ```bash
+    ```
     [2020-10-08 12-37-37.mkv-329.png] #256
     Distortion: 0.0311905
     Match: governor_more_info_kills
@@ -43,12 +43,15 @@ Here's a quick break down of what happens during application execution for job `
     OCR: t5 094345220a180a383086e358f006af72.png
     ```
 
-    The hashed image is the cropped image segment. These files are considered temporary and are purged on each new run.
-    3. If provided a callback function will further process this single data point.
-3. Data is structured per the profile and prepared for output, in this case a CSV.
+    A callback function can be provided to further process this data point.
+3. After all reading is complete data is structured and further processed as a whole per the profile and prepared for output.
 4. A table prints with the data formatted per the previously loaded profile.
 
 ## Setup
+
+- Game resolution and capture of at least 1920x1080
+
+### Install
 
 Requirements:
 
@@ -57,11 +60,11 @@ Requirements:
 - [Tesseract](https://github.com/tesseract-ocr/tesseract)
 - [FFmpeg](https://ffmpeg.org/)
 
-Recommended:
+**Ubuntu**
 
-- Game resolution and capture of at least 1920x1080
-
-### Install
+```bash
+sudo apt install imagemagick ffmpeg tesseract-ocr tesseract-ocr-all
+```
 
 ```bash
 git clone https://github.com/carmelosantana/rok-monster-cli
@@ -91,8 +94,8 @@ Changes can be made in a new file with the name of `my-config.php`. Existing job
 
 | Argument | Value | Default |Description |
 | --- | --- | --- | --- |
-| echo | `boolean` | *0* | Prints raw OCR reading per image |
-| purge | `boolean` | *1* | Delete tmp working DIR at job start |
+| debug | `boolean` | *0* | Prints raw OCR reading per image |
+| purge | `boolean` | *0* | Delete tmp working DIR at job start |
 | video | `boolean` | *1* | Process video - create screenshots etc |
 | distortion | `float` | *0.037* | Distortion metric measured by Imagick compare  |
 | frames | `int` | *45* | Frames between each screenshot  |
@@ -108,8 +111,6 @@ php rok.php --job=governor_more_info --video=0 --purge=0 --distoration=0.05
 ```
 
 ## Jobs
-
-Jobs are predefined actions that can perform numerous actions.
 
 **Available jobs:**
 
