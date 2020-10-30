@@ -14,6 +14,7 @@ function cli_echo($msg=null, $args=array()){
         'color_scheme' => null,
         'format' => false,
         'header' => null,
+        'function' => null,
         'show_time' => false,
 
         // actions
@@ -39,7 +40,14 @@ function cli_echo($msg=null, $args=array()){
     if ( $progress )
         $header = 'work';
     
-    if ( $header )
+    if ( $header ){
+        switch ( $header ){
+            case 'error':
+                if ( $function )
+                   $msg = $function . ' - ' . $msg;                
+            break;            
+        }
+    }
         $args['color_scheme'] = $header;
 
     // color + output
@@ -80,7 +88,7 @@ function cli_echo($msg=null, $args=array()){
     }
         
     // cya buddy
-    if ( $exit and is_cli() )
+    if ( $exit or $header == 'error' )
         die(PHP_EOL);
 
     // just return it
