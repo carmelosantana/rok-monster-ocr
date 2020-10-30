@@ -29,11 +29,7 @@ function rok_init(){
 		cli_parse_get();
 
 		// setup php
-		cli_php_setup();
-
-		// delete images and cache from previous job
-		if ( cli_get_arg('purge') )
-			rok_purge_tmp();		
+		cli_php_setup();		
 	}
 
 	// welcome
@@ -145,7 +141,7 @@ function rok_cli_help(){
 }
 
 function rok_cli_table($schema=null, $data=null){
-	if ( !$schema )
+	if ( !$schema or !is_cli() )
 		return false;
 
 	$table = new CliTable;
