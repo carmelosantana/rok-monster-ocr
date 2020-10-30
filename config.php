@@ -83,7 +83,6 @@ $rok_config = [
             't3' => 't3',
             't4' => 't4',
             't5' => 't5',
-            'date' => '_created',
         ],
         'table' => [
             ['Name', 'name', false, 'white'],
