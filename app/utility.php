@@ -3,10 +3,6 @@ function rok_get_config(string $option, $alt=false){
 	return ($GLOBALS['rok_config'][$option] ?? $alt);
 }
 
-function rok_get_input_path($dir){
-	return ROK_PATH_INPUT . '/' . $dir;
-}
-
 function rok_get_public_images($img, $dir, $ext='.png'){
 	return ROK_PATH_IMAGES . '/' . $dir . '/' . $img . $ext;
 }
@@ -23,10 +19,27 @@ function rok_get_files($path, $limit=-1, $offset=0){
 	return $files;
 }
 
-function rok_purge_tmp(){
-	$files = sort_filesystem_iterator(ROK_PATH_TMP);
+function is_mime_content_type($file=null, $type='image'){
+	if ( !is_file($file) )
+		return false;
 
-	foreach ( $files as $file )
-		if ( is_file($file) )
-			unlink($file);
+	$mime = mime_content_type($file);
+	
+	if ( substr($mime, 0, strlen($type)) == $type )
+		return true;
+
+	return false;
+}
+
+function get_mime_content_type($file=null){
+	foreach ( ['image', 'video'] as $type )
+		if ( is_mime_content_type($file, $type) )
+			return $type;
+
+	return false;
+}
+
+function rok_callback($function=null, $arg=null){
+	if ( $function and function_exists($function) ) 
+		return $function($arg);
 }
