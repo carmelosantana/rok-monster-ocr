@@ -3,10 +3,6 @@ function rok_get_config(string $option, $alt=false){
 	return ($GLOBALS['rok_config'][$option] ?? $alt);
 }
 
-function rok_get_public_images($img, $dir, $ext='.png'){
-	return ROK_PATH_IMAGES . '/' . $dir . '/' . $img . $ext;
-}
-
 function rok_get_files($path, $limit=-1, $offset=0){
 	// error checks
 	if ( !$path or !is_dir($path) )
