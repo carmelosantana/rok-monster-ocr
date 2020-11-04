@@ -1,30 +1,11 @@
 <?php
-// Jobs and media config
-global $rok_config;
-$rok_config = [
-    // resolution
-    'width' => 1920,
-    'height' => 1080,
-
-    // when to capture
-    'frames' => 45,
-
-    // keys to use while building generic user word lists
-    'user_words' => [
-        'name',
-    ],
-
-    // samples by categories
-    'samples' => [
-        'governor_more_info' => [
-            'governor_more_info_kills' => '0.037', 
-        ]
-    ],
-    // oem 1 reads name well, but not numbers
-    // oem 0 reads all, messes up some chars in 
-    
+// Jobs
+$GLOBALS['rok_config'] = [
     // governors more info + kills
     'governor_more_info_kills' => [
+        'autocrop' => false,
+        'sample' => ROK_PATH_IMAGES . '/sample/governor_more_info_kills-1920.jpg',
+        'distortion' => 0.037,
         'oem' => 0,
 		'psm' => 7,
         'ocr_schema' => [
@@ -73,27 +54,16 @@ $rok_config = [
                 'callback' => 'text_remove_non_numeric',
             ],
         ],
-        'csv_headers' => [
-            'name' => 'name',
-            'power' => 'power',
-            'kills' => 'kills',
-            'deaths' => 'deaths',
-            't1' => 't1',
-            't2' => 't2',
-            't3' => 't3',
-            't4' => 't4',
-            't5' => 't5',
-        ],
         'table' => [
             ['Name', 'name', false, 'white'],
-            ['Power', 'power', 'nicenumber', 'green'],
-            ['Kills', 'kills', 'nicenumber', 'white'],
-            ['Deaths', 'deaths', 'nicenumber', 'white'],
-            ['T1', 't1', 'nicenumber', 'white'],
-            ['T2', 't2', 'nicenumber', 'white'],
-            ['T3', 't3', 'nicenumber', 'white'],
-            ['T4', 't4', 'nicenumber', 'white'],
-            ['T5', 't5', 'nicenumber', 'white'],
+            ['Power', 'power', false, 'green'],
+            ['Kills', 'kills', false, 'white'],
+            ['Deaths', 'deaths', false, 'white'],
+            ['T1', 't1', false, 'white'],
+            ['T2', 't2', false, 'white'],
+            ['T3', 't3', false, 'white'],
+            ['T4', 't4', false, 'white'],
+            ['T5', 't5', false, 'white'],
         ],
     ],
 ];
