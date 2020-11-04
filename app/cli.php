@@ -20,7 +20,7 @@ function rok_cli_logo($style=true){
 }
 
 // init
-function rok_init(){
+function rok_init(array $args=[]){
 	if ( is_cli() ){
 		// @important for padding
 		mb_internal_encoding('utf-8');
@@ -36,7 +36,7 @@ function rok_init(){
 	rok_cli_text('logo_version');
 
 	// exec
-	rok_bin($args=[]);
+	rok_bin($args);
 
 	// goodbye
 	rok_cli_text('exit');
@@ -47,38 +47,11 @@ function rok_bin(array $args=[]){
 	// change DIR
 	chdir(ROK_PATH_TMP);
 
-	// vars
-	$output = false;
-
-	// defaults
-	$def = [
-        'job' => null,
-        'echo' => false,
-    ];
-
-	// merge with defaults if passed while loading
-	if ( empty($args) ){
-	    $args = cli_parse_args($_GET, $def);
-
-		// add CLI args
+	// add CLI args
+	if ( empty($args) )
 	    $args = array_merge($args, $_GET);    
 
-	// only merge with defaults from external program
-	} else {
-		$args = array_merge($def, $args);
-
-	}
-
-	// run job if defined
-	if ( isset(rok_get_config('samples')[$args['job']]) ){
-		$output = rok_do_ocr($args);
-
-	} else {
-		rok_cli_help();
-
-	}
-
-	return $output;
+	return rok_do_ocr($args);
 }
 
 function rok_cli_text($text=null, $echo=true){
@@ -118,26 +91,6 @@ function rok_cli_text($text=null, $echo=true){
 		echo $out;
 
 	return $out;
-}
-
-function rok_cli_help(){
-	$schema = array(
-		'option' => array(
-			'title' => 'Option',
-			'size' => 14,
-		),
-		'desc' => array(
-			'title' => 'Description',
-			'size' => 28,
-		)
-	);
-	$data = [
-		'option' => '--job',
-		'desc' => 'player, kingdom, inventory',
-	];
-	cli_echo_array($schema, false, array('header' => 1));
-	cli_echo_array($schema, $data);
-	cli_echo_array($schema, false, array('footer' => true));	
 }
 
 function rok_cli_table($schema=null, $data=null){
