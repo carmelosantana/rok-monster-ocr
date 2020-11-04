@@ -2,7 +2,7 @@
 require_once __DIR__ . '/vendor/autoload.php';
 
 // app
-defined('ROK_VER') or define('ROK_VER', '0.1.0');
+defined('ROK_VER') or define('ROK_VER', '0.1.1');
 defined('ROK_LANG') or define('ROK_LANG', 'eng');
 defined('ROK_PATH') or define('ROK_PATH', __DIR__);
 defined('ROK_PATH_APP') or define('ROK_PATH_APP', ROK_PATH . '/app');
@@ -20,6 +20,7 @@ defined('ROK_PATH_TMP') or define('ROK_PATH_TMP', dirname(ROK_PATH) . '/tmp');
 
 // app
 require_once ROK_PATH_APP . '/app.php';
+require_once ROK_PATH_APP . '/class-autocrop.php';
 require_once ROK_PATH_APP . '/cli.php';
 require_once ROK_PATH_APP . '/ffmpeg.php';
 require_once ROK_PATH_APP . '/lib-cli.php';
