@@ -26,7 +26,7 @@ function cli_echo($msg=null, $args=array()){
     );
 
     // args to vars
-    $args = cli_parse_args($args, $def);
+    $args = array_merge($def, $args);
     extract($args);
 
     // vars
@@ -109,7 +109,7 @@ function cli_echo_array($schema=null, $data=null, $args=array()){
     );
 
     // args to vars
-    $args = cli_parse_args($args, $def);
+    $args = array_merge($def, $args);
     extract($args);
 
     if ( $schema ){
@@ -179,7 +179,7 @@ function cli_txt_style(string $txt, array $args){
     ];
 
     // args to vars
-    $args = extract(cli_parse_args($args, $def));
+    $args = extract(array_merge($def, $args));
 
     if ( !$txt )
         return false;
@@ -266,25 +266,6 @@ function cli_get_arg($a, $alt=false){
 	return $alt;
 }
 
-function cli_mkdir(string $path=null, bool $exit=true){
-    // if we already exist, we're good
-    if ( is_dir($path) )
-        return true;
-
-    // mask + mkdir
-    $oldmask = umask(0);
-    mkdir($path, 0777);
-    umask($oldmask);
-
-    // did we make the dir, if so we're good
-    if( is_dir($path) )
-        return true;
-
-    // awesome something went wrong, fail
-    if ( $exit )
-        cli_echo('cli_mkdir() - '. $path, ['header' => 'error', 'exit' => 1]);
-}
-
 function cli_rmdirr(string $path) {
     foreach ( glob("{$path}/*" ) as $file) {
         if ( is_dir($file) ) { 
@@ -310,51 +291,6 @@ function cli_parse_get(){
 	if ( !empty($args)){foreach($args as $param){if (strpos($param, '--') === 0){$paramString = substr($param, 2);if ( ! empty($paramString)){if (strpos($paramString, '=') !== false){list($key, $value) = explode('=', $paramString);$_GET[strtolower($key)] = $value;}else{$_GET[strtolower($paramString)] = null;}}}}}
 }
 
-/**
- * Merge user defined arguments into defaults array.
- *
- * This function is used throughout WordPress to allow for both string or array
- * to be merged into another array.
- *
- * @since 2.2.0
- * @since 2.3.0 `$args` can now also be an object.
- *
- * @param string|array|object $args     Value to merge with $defaults.
- * @param array               $defaults Optional. Array that serves as the defaults. Default empty.
- * @return array Merged user defined values with defaults.
- */
-function cli_parse_args( $args, $defaults = '' ) {
-	if ( is_object( $args ) ) {
-		$r = get_object_vars( $args );
-	} elseif ( is_array( $args ) ) {
-		$r =& $args;
-	} else {
-		cli_parse_str( $args, $r );
-	}
-
-	if ( is_array( $defaults ) ) {
-		return array_merge( $defaults, $r );
-	}
-	return $r;
-}
-
-/**
- * Parses a string into variables to be stored in an array.
- *
- * Uses {@link https://secure.php.net/parse_str parse_str()} and stripslashes if
- * {@link https://secure.php.net/magic_quotes magic_quotes_gpc} is on.
- *
- * @since 2.2.1
- *
- * @param string $string The string to be parsed.
- * @param array  $array  Variables will be stored in this array.
- */
-function cli_parse_str( $string, &$array ) {
-	parse_str( $string, $array );
-
-	return $array;
-}
-
 function cli_php_setup(){
 	ini_set('memory_limit', '2048M');
 	ini_set('default_socket_timeout', '300');
@@ -374,10 +310,6 @@ function cli_php_setup(){
 		error_reporting(E_ALL);
 		ini_set('display_errors', 1);
 	}
-}
-
-function cli_shell_exec(){
-    cli_echo();
 }
 
 /**
@@ -628,37 +560,4 @@ function sort_filesystem_iterator($files_path=null, $offset=0, $limit=-1){
 
 	// we're done
 	return $files;
-}
-
-/*
- * Misc
- */
-// https://stackoverflow.com/questions/1416697/converting-timestamp-to-time-ago-in-php-e-g-1-day-ago-2-days-ago#18602474
-function time_elapsed_string($datetime, $full = false) {
-    $now = new DateTime;
-    $ago = new DateTime($datetime);
-    $diff = $now->diff($ago);
-
-    $diff->w = floor($diff->d / 7);
-    $diff->d -= $diff->w * 7;
-
-    $string = array(
-        'y' => 'year',
-        'm' => 'month',
-        'w' => 'week',
-        'd' => 'day',
-        'h' => 'hour',
-        'i' => 'minute',
-        's' => 'second',
-    );
-    foreach ($string as $k => &$v) {
-        if ($diff->$k) {
-            $v = $diff->$k . ' ' . $v . ($diff->$k > 1 ? 's' : '');
-        } else {
-            unset($string[$k]);
-        }
-    }
-
-    if (!$full) $string = array_slice($string, 0, 1);
-    return $string ? implode(', ', $string) . ' ago' : 'just now';
 }
