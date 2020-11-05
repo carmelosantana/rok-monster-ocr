@@ -5,6 +5,7 @@
         "wujunze/php-cli-color": "dev-master",
         "php-ffmpeg/php-ffmpeg": "^0.13.0",
         "treinetic/imageartist": "^1.0",
-        "jc21/clitable": "^1.2"
+        "jc21/clitable": "^1.2",
+        "james-heinrich/getid3": "^1.9"
     }
 }
