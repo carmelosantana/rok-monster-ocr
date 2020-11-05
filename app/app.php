@@ -123,7 +123,7 @@ function rok_do_ocr(array $args){
 			
 			// does not match a template
 			if ( $image_distortion > (float) $profile['distortion'] ){
-				cli_echo('Skipping ...');
+				cli_echo('Skip' . PHP_EOL);
 				continue;
 			}
 		
@@ -177,7 +177,7 @@ function rok_do_ocr(array $args){
 				// Reading Rainbow!
 				->run();
 			
-			cli_echo('OCR: ' . $key . ' ' . cli_txt_style(basename($image), ['fg' => 'light_gray']));
+			cli_echo('OCR: ' . cli_txt_style(basename($image), ['fg' => 'light_gray']));
 			$tmp[$key] = text_remove_extra_lines($ocr);
 
 			if ( isset($profile['ocr_schema'][$key]['callback']) and function_exists($profile['ocr_schema'][$key]['callback']) )
@@ -193,7 +193,7 @@ function rok_do_ocr(array $args){
 		$data[] = $tmp;
 
 		// space for next
-		echo PHP_EOL;		
+		echo PHP_EOL;
 	}
 
 	// add user words
