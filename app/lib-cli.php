@@ -2,7 +2,7 @@
 /**
  * CLI
  */
-function cli_echo($msg=null, $args=array()){
+function cli_echo($msg=null, $args=[]){
     $def = array(
         // progress
         'done' => null,
@@ -95,7 +95,11 @@ function cli_echo($msg=null, $args=array()){
     return $out;
 }
 
-function cli_echo_array($schema=null, $data=null, $args=array()){
+function cli_debug_echo($msg=null, $args=[]){
+    cli_echo($msg, array_merge([ 'header' => 'debug' ], $args));
+}
+
+function cli_echo_array($schema=null, $data=null, $args=[]){
     $def = array(
     	// options
     	'header' => false,
