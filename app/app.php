@@ -19,6 +19,7 @@ function rok_do_ocr(array $args){
 		'oem' => 0,
 		'psm' => 7,
 		'distortion' => 0,
+		'video' => true,	// do we process videos?
 				
 		// callbacks
 		'callback_files_ocr' => null,
@@ -80,7 +81,7 @@ function rok_do_ocr(array $args){
 
 	// setup path to search for files
 	} elseif ( is_dir($input_path) ){
-		$args['files_ocr'] = rok_get_files_ocr($input_path, $tmp_path);
+		$args['files_ocr'] = rok_get_files_ocr($input_path, $tmp_path, $video);
 
 	// issue with file or path
 	} else {
@@ -117,7 +118,7 @@ function rok_do_ocr(array $args){
 
 		// match image to sample retrieve templates
 		if ( $compare_to_sample ){
-			$image_distortion = image_compare_get_distortion($file, $profile['sample']);
+			$image_distortion = image_compare_get_distortion($profile['sample'], $file, true);
 			cli_echo('Distortion: ' . $image_distortion);
 			
 			// does not match a template
@@ -130,6 +131,9 @@ function rok_do_ocr(array $args){
 				$tmp = [ '_image_distortion' => $image_distortion ];
 		}
 
+		// determine image scale factor for crop points
+		$scale_factor = rok_image_scale_factor($file, $profile['sample']);
+
 		// slice image for parts
 		$images = [];
 		foreach ( $profile['ocr_schema'] as $key => $schema ){
@@ -140,9 +144,14 @@ function rok_do_ocr(array $args){
 			if ( empty($schema['crop']) )
 				continue;
 
-			// cut image for this key
+			// crop image location
 			$images[$key] = ROK_PATH_TMP . '/' . md5($file) . '-' . $key . '.' . pathinfo($file)['extension'];
-			image_crop($file, $images[$key], $schema['crop']);
+
+			// adjust crop scale
+			$crop = rok_scale_factor($schema['crop'], $scale_factor);
+			
+			// crop
+			image_crop($file, $images[$key], $crop);
 		}
 
 		// ocr each image part
@@ -174,15 +183,17 @@ function rok_do_ocr(array $args){
 			if ( isset($profile['ocr_schema'][$key]['callback']) and function_exists($profile['ocr_schema'][$key]['callback']) )
 				$tmp[$key] = $profile['ocr_schema'][$key]['callback']($tmp[$key]);
 
-			if ( $debug )
-				echo $tmp[$key] . PHP_EOL;
+			cli_debug_echo( $tmp[$key] );
+				
+			if ( !$debug )
+				unset($image);
 		}
-
+	
 		// add entry to others
 		$data[] = $tmp;
 
 		// space for next
-		echo PHP_EOL;
+		echo PHP_EOL;		
 	}
 
 	// add user words
@@ -200,6 +211,21 @@ function rok_do_ocr(array $args){
 	}
 
 	return ['data' => $data, 'job' => $args];
+}
+
+function rok_scale_factor($crop, $scale){
+	$out = [];
+	foreach ( $crop as $n )
+		$out[] = round( $n * $scale );
+
+	return $out;
+}
+
+function rok_image_scale_factor($img1, $img2){
+	list( $img1_width, $img1_height ) = getimagesize($img1);
+	list( $img2_width, $img2_height ) = getimagesize($img2);
+
+	return number_format($img1_height/$img2_height, 2);
 }
 
 // prep file for scan
@@ -360,7 +386,7 @@ function rok_ocr_build_user_words($data, $keys, $output){
 /*
  *	Build file lists
  */
-function rok_get_files_ocr($path, $tmp_path=null, $offset=0, $limit=-1){
+function rok_get_files_ocr($path, $tmp_path=null, $video=true, $offset=0, $limit=-1){
 	// error checks
 	if ( !$path or !is_dir($path) )
 		cli_echo('rok_get_dir() - DIR does not exist ' . $path, array('header' => 'error'));
@@ -379,14 +405,16 @@ function rok_get_files_ocr($path, $tmp_path=null, $offset=0, $limit=-1){
 
 			// add exported images from video
 			case 'video':
-				if ( !$tmp_path )
-					$tmp_path = ROK_PATH_TMP;
+				if ( $video ){
+					if ( !$tmp_path )
+						$tmp_path = ROK_PATH_TMP;
 
-				$save_to = $tmp_path . '/' . pathinfo($file)['filename']; 
-				rok_video_find_scene_change($file, $save_to);
+					$save_to = $tmp_path . '/' . pathinfo($file)['filename']; 
+					rok_video_find_scene_change($file, $save_to);
 
-				// add these video files to total files
-				$files_output+= rok_get_files_ocr($save_to);
+					// add these video files to total files
+					$files_output+= rok_get_files_ocr($save_to);
+				}
 			break;
 		}
 	}
