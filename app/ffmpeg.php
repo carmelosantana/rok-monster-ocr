@@ -9,26 +9,31 @@ function rok_do_ffmpeg_cmd(array $args){
 		'output_path' => null,
 
 		// ffmpeg
-		'frames' => 30,
+		'fps_multiplier' => 1.5,
 		'ss' => null,
 		'threshold' => '0.4',
 	];
 	
 	// args to vars
-    $args = cli_parse_args($args, $def);
+    $args = array_merge($def, $args);
     extract($args);
 
 	// error checks
 	if ( !$input or !file_exists($input) )
-		cli_echo('rok_do_ffmpeg() - input file does not exist ' . $input_path, ['header' => 'error', 'exit' => 1]);
+		cli_echo('$input file does not exist ' . $input_path, ['header' => 'error', 'function' => __FUNCTION__]);
 	if ( !$output_path or !is_dir($output_path) )
-		cli_echo('rok_do_ffmpeg() - output DIR does not exist ' . $output_path, ['header' => 'error', 'exit' => 1]);
+		cli_echo('$output_path does not exist ' . $output_path, ['header' => 'error', 'function' => __FUNCTION__]);
 
 	// output file
 	$output_file = $output_path . '/' . pathinfo($input)['basename'];
 
+	// frames
+	$getID3 = new getID3;
+	$input_info = $getID3->analyze($input);
+	$frames = round(round($input_info['video']['frame_rate'])*round($fps_multiplier));
+
 	// start command
-	$vf_scale = 'scale='.rok_get_config('width', 1920).':-1';
+	$vf_scale = ' scale='.$input_info['video']['resolution_x'].':-1';
 	$output_file_d = '"' . $output_file.'-%d.png" ';
 
 	$cmd = 'ffmpeg -i "'.$input.'" ';
