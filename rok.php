@@ -2,7 +2,7 @@
 require_once __DIR__ . '/vendor/autoload.php';
 
 // app
-defined('ROK_VER') or define('ROK_VER', '0.1.1');
+defined('ROK_VER') or define('ROK_VER', '0.1.2');
 defined('ROK_LANG') or define('ROK_LANG', 'eng');
 defined('ROK_PATH') or define('ROK_PATH', __DIR__);
 defined('ROK_PATH_APP') or define('ROK_PATH_APP', ROK_PATH . '/app');
