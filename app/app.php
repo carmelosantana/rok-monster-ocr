@@ -16,8 +16,8 @@ function rok_do_ocr(array $args){
 		'profile' => [],
 
 		// profile overrides 
-		'oem' => 0,
-		'psm' => 7,
+		'oem' => null,
+		'psm' => null,
 		'distortion' => 0,
 		'video' => true,	// do we process videos?
 				
@@ -36,6 +36,7 @@ function rok_do_ocr(array $args){
 
 		// TesseractOCR
 		'lang' => 'eng',
+		'tessdata' => null,
 		'user_words' => null,
 		'user_patterns' => null,
 
@@ -63,14 +64,6 @@ function rok_do_ocr(array $args){
 		if ( !$profile )
 			cli_echo('Missing --job template', ['header' => 'error', 'function' => __FUNCTION__]);
 	}
-
-	// build profile with CLI args
-	$profile_def = [
-		'oem' => $oem,
-		'psm' => $psm,
-		'distortion' => $distortion,		
-	];	
-	$profile = array_merge($profile_def, $profile);
 
 	// log any starting notes
 	cli_echo('Starting ' . $job, ['format' => 'bold']);
@@ -158,6 +151,8 @@ function rok_do_ocr(array $args){
 		foreach ( $images as $key => $image ){
 			// ocr
 			$ocr = (new TesseractOCR($image))
+				->tessdataDir($tessdata)
+	
 				// provided by profile
 				->configFile(($profile['ocr_schema'][$key]['config']??null))
 				->whitelist(($profile['ocr_schema'][$key]['whitelist']??null))
@@ -171,8 +166,8 @@ function rok_do_ocr(array $args){
 				->userPatterns($user_patterns)
 
 				// settings:
-				->oem((int) $oem)       
-				->psm((int) $psm)
+				->oem((int) ($oem ?? $profile['oem']) )       
+				->psm((int) ($psm ?? $profile['psm']) )
 
 				// Reading Rainbow!
 				->run();
