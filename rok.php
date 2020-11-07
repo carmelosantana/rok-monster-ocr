@@ -9,9 +9,10 @@ defined('ROK_PATH_APP') or define('ROK_PATH_APP', ROK_PATH . '/app');
 defined('ROK_PATH_IMAGES') or define('ROK_PATH_IMAGES', ROK_PATH . '/images');
 
 // configs
+$GLOBALS['rok_config'] = [];
+if( file_exists(ROK_PATH . '/config.local.php') )
+    require_once ROK_PATH . '/config.local.php';
 require_once ROK_PATH . '/config.php';
-if( file_exists(ROK_PATH . '/my-config.php') )
-    require_once ROK_PATH . '/my-config.php';
 
 // Path for media and working tmp
 defined('ROK_PATH_INPUT') or define('ROK_PATH_INPUT', dirname(ROK_PATH) . '/input');
