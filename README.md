@@ -9,24 +9,24 @@
 - [Usage](#usage)
   - [Arguments](#arguments)
 - [Jobs](#jobs)
-  - [Governor More Info](#governor-more-info)
+  - [Governor More Info Kills](#governor-more-info-kills)
     - [Input](#input)
     - [Data](#data)
     - [Output](#output)
 - [Job definition](#job-definition)
 
-Command line tools to help construct player statistics from [Rise of Kingdoms](https://rok.lilithgames.com/en). By analyzing recorded game play we can extract various data points such as governor power, deaths, kills and more. This can help with various kingdom statistics or fairly distributing [KvK](https://rok.guide/the-lost-kingdom-kvk/) rewards.
+Command line tools to help automate collection of player statistics from [Rise of Kingdoms](https://rok.lilithgames.com/en). By analyzing recorded game play we can extract various data points such as governor power, deaths, kills and more. This can help with various kingdom statistics or fairly distributing [KvK](https://rok.guide/the-lost-kingdom-kvk/) rewards.
 
 ![Sample](https://cdn.wp.farm/rok.monster/github/1638-sample.png)
 
 ## How it works
 
-Here's a quick overview of what happens during application execution for job `governor_more_info`.
+Here's a quick overview of what happens during application execution for job `governor_more_info_kills`.
 
-1. Screenshots are created from the input video representing the most "interesting" frames. This will hopefully capture a clear image of the screen that contains the data we're trying to collect.
+1. Screenshots are captured from any source video representing the most "interesting" frames.
 2. We iterate through each frame and perform the following actions:
-   1. Screenshots are compared to sample images. When a match is found a profile is loaded containing instructions for further processing.
-   2. The image is cropped per each segment declared in the profile. Each segment represents a single data point we're trying to collect. This is an output confirming a match was found and we're trying to capture data.
+   1. Screenshots are compared to sample images.
+   2. The image is cropped per instructions declared in the profile. Each segment represents a single data point we're trying to collect. This is an output confirming a match was found and we're trying to capture data.
 
     ```
     [2020-10-08 12-37-37.mkv-329.png] #256
@@ -50,6 +50,7 @@ Here's a quick overview of what happens during application execution for job `go
 ## Setup
 
 - Game resolution and capture of at least 1920x1080
+- 
 
 ### Install
 
@@ -57,6 +58,7 @@ Requirements:
 
 - php 7.4 *(tested)*
 - [Composer](https://getcomposer.org/)
+- [ImageMagick](https://imagemagick.org/)
 - [Tesseract](https://github.com/tesseract-ocr/tesseract)
 - [FFmpeg](https://ffmpeg.org/)
 
@@ -76,51 +78,49 @@ composer install
 
 Default jobs and basic settings are defined in `config.php`. This file should **not** be modified as it may change with development.
 
-Changes can be made in a new file with the name of `my-config.php`. Existing jobs can be changed, new jobs can be added, and media paths can be defined in `my-config.php`. *Technically* it will load anything but for now we'll be using it for custom jobs 😅.
+Changes can be made in a new file with the name of `config.local.php`. Existing jobs can be changed, new jobs can be added, and media paths can be defined in `config.local.php`. *Technically* it will load anything but for now we'll be using it for custom jobs 😅.
 
 ## Usage
 
 1. Record the necessary screens specified per the given job. In this example we need the **Governor More Info** profile screen.
-2. Copy video to `ROK_PATH_INPUT`.
+2. Copy video to `ROK_PATH_INPUT` or use `--input_path=YOUR_PATH_HERE`.
 3. Run job:
 
     ```bash
-    php rok.php --job=governor_more_info
+    php rok.php --job=governor_more_info_kills --input_path=YOUR_PATH_HERE
     ```
 
-4. Check `ROK_PATH_OUTPUT` for files containing Governor statistics.
+4. Check `ROK_PATH_OUTPUT` or `--output_path` for files containing Governor statistics.
 
 ### Arguments
 
 | Argument | Value | Default |Description |
 | --- | --- | --- | --- |
 | debug | `boolean` | *0* | Prints raw OCR reading per image |
-| purge | `boolean` | *0* | Delete tmp working DIR at job start |
-| video | `boolean` | *1* | Process video - create screenshots etc |
 | distortion | `float` | *0.037* | Distortion metric measured by Imagick compare  |
-| frames | `int` | *45* | Frames between each screenshot  |
-| oem | `int` | *0* | Tesseract setting |
-| psm | `int` | *7* | Tesseract setting |
+| input_path | `string` | `ROK_PATH_INPUT` | Source media files  |
+| oem | `int` | *0* | OCR Engine Mode |
+| output_path | `string` | `ROK_PATH_OUTPUT` | Output from rok.php  |
+| psm | `int` | *7* | Page Segmentation Method |
+| tessdata | `string` | `null` | User defined location for tessdata |
+| tmp_path | `string` | `ROK_PATH_TMP` | Temp directory for images manipulated during processing  |
+| video | `boolean` | *1* | Process video - create screenshots etc |
 
 - *boolean 0/1*
 
-**Example:** Reprocess images without creating new screenshots and change distortion.
-
-```bash
-php rok.php --job=governor_more_info --video=0 --purge=0 --distoration=0.05
-```
-
 ## Jobs
+
+Default jobs are defined in `config.php` while user defined jobs can be added to `config.local.php`. A job contains all necessary instructions to prepare an image or video for OCR.
 
 **Available jobs:**
 
-- [Governor More Info](#governor-more-info)
+- [Governor More Info Kills](#governor-more-info-kills)
 
-### Governor More Info
+### Governor More Info Kills
 
-`governor_more_info`
+`governor_more_info_kills`
 
-![Governor Info](images/sample/governor_more_info_kills.png)
+![Governor Info](images/sample/governor_more_info_kills-1920.jpg)
 
 #### Input
 
@@ -136,7 +136,6 @@ Recording of the governor(s) **More Info** screen located in their profile. Kill
 
 #### Output
 
-- CSV
 - Table via CLI
 
 ## Job definition

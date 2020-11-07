@@ -3,33 +3,26 @@ use thiagoalessio\TesseractOCR\TesseractOCR;
 use Treinetic\ImageArtist\lib\Image;
 
 /*
-	PSM 
-	0    Orientation and script detection (OSD) only.
-	1    Automatic page segmentation with OSD.
-	2    Automatic page segmentation, but no OSD, or OCR.
-	3    Fully automatic page segmentation, but no OSD. (Default)
-	4    Assume a single column of text of variable sizes.
-	5    Assume a single uniform block of vertically aligned text.
-	6    Assume a single uniform block of text.
-	7    Treat the image as a single text line.
-	8    Treat the image as a single word.
-	9    Treat the image as a single word in a circle.
-	10    Treat the image as a single character.
-	11    Sparse text. Find as much text as possible in no particular order.
-	12    Sparse text with OSD.
-	13    Raw line. Treat the image as a single text line, bypassing hacks that are Tesseract-specific.
-
-	OCR engine mode	Working description
-	0	Legacy engine only
-	1	Neural net LSTM only
-	2	Legacy + LSTM mode only
-	3	By Default, based on what is currently available	
-*/
+ * OCR
+ */
+// primary ocr loop
 function rok_do_ocr(array $args){
 	// def
 	$def = array(
 		// what are we doing
 		'job' => null,
+
+		// crop schema and data points for OCR
+		'profile' => [],
+
+		// profile overrides 
+		'oem' => null,
+		'psm' => null,
+		'distortion' => 0,
+		'video' => true,	// do we process videos?
+				
+		// callbacks
+		'callback_files_ocr' => null,
 
 		// files
 		'input_path' => ROK_PATH_INPUT,
@@ -38,105 +31,101 @@ function rok_do_ocr(array $args){
 		'offset' => 0,
 		'limit' => -1,
 
-		// enable video processing
-		'video' => true,
-
 		// image processing
 		'compare_to_sample' => true,
-		'distortion' => 0,
 
 		// TesseractOCR
-		'oem' => 0,
-		'psm' => 7,
+		'lang' => 'eng',
+		'tessdata' => null,
+		'user_words' => null,
+		'user_patterns' => null,
+
+		// after OCR
 		'build_user_words' => false,
 
 		// internal vars
 		'debug' => false,
-		'output' => [],
 	);
 
 	// args to vars
-    $args = cli_parse_args($args, $def);
-	extract($args);
+	extract(array_merge($def, $args));
+
+	// extract langs
+	extract(rok_ocr_lang_args($lang));
 
 	// always check if job is provided, if not config lookup will fail
 	if ( !$job )
-		cli_echo('rok_do_ocr() - Missing --job', array('header' => 'error'));
-		
-	cli_echo('Starting '.$job, array('format' => 'bold'));
+		cli_echo('Missing --job', ['header' => 'error', 'function' => __FUNCTION__]);
 
-	// check if single file or path to dir
-	// TODO: fix single file input
+	// check for profile
+	if ( !$profile ){
+		$profile = rok_get_config($job);
+
+		if ( !$profile )
+			cli_echo('Missing --job template', ['header' => 'error', 'function' => __FUNCTION__]);
+	}
+
+	// log any starting notes
+	cli_echo('Starting ' . $job, ['format' => 'bold']);
+
+	// setup file for OCR
 	if ( is_file($input_path) ){
 		$args['files_ocr'] = [$input_path];
 
+	// setup path to search for files
 	} elseif ( is_dir($input_path) ){
-		$args['files_ocr'] = rok_get_files_ocr($input_path, $tmp_path);
+		$args['files_ocr'] = rok_get_files_ocr($input_path, $tmp_path, $video);
 
+	// issue with file or path
 	} else {
-		cli_echo('rok_do_ocr() - Missing $input_path', array('header' => 'error'));
+		cli_echo('Missing $input_path', ['header' => 'error', 'function' => __FUNCTION__]);
 
 	}
 
-	// if not set, try tmp DIR
+	// if files_ocr contains no files
 	if ( !isset($args['files_ocr']) or !$args['files_ocr'] or empty($args['files_ocr']))
-		cli_echo('rok_do_ocr() - Missing $args[\'files_ocr\']', array('header' => 'error'));
+		cli_echo('Missing $args[\'files_ocr\']', ['header' => 'error', 'function' => __FUNCTION__]);
 
 	// start vars
-	$data = [];
+	$data = $output = [];
 	$count = 0;
 	
 	// process each image file
 	foreach ($args['files_ocr'] as $file) {
-		if ( !is_file($file) ) continue;	// maybe we've already removed this file
-		if ( is_dot_file($file) ) continue;	// manually SKIP_DOTS
+		rok_callback($callback_files_ocr, $file);
 
-		// skip non image formats
-		if ( !is_mime_content_type($file, 'image') ) continue;
+		// check if file, mime type match and SKIP_DOTS
+		if ( !is_mime_content_type($file, 'image') or is_dot_file($file) ) continue;	// skip non image formats
 
 		// persistent
 		$count++;
 		cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'light_green']) . ' #' . $count);
+		
+		// start/reset data for entry
+		$tmp = [];
+		if ( $debug )
+			$tmp = [ '_image' => basename($file) ];
+
+		// prep image
+		$file = rok_ocr_prep_image($file, $tmp_path, $profile);
 
 		// match image to sample retrieve templates
 		if ( $compare_to_sample ){
-			$match = false;
-			rok_get_config('samples')[$job] ?? die();
-			foreach ( rok_get_config('samples')[$job] as $sample => $sample_dist ){
-				$image_distortion = image_compare_get_distortion($file, rok_get_public_images($sample, 'sample'));
-
-				cli_echo('Distortion: ' . $image_distortion);
-				
-				// does not match a template
-				if ( $image_distortion >= ($distortion > 0 ? $distortion : $sample_dist) ){
-					continue;
-	
-				} else {
-					// matched
-					$match = true;
-					cli_echo('Match: ' . $sample, ['fg' => 'light_green']);
-				}	
-			}
-
-			// if no match to sample skip input file
-			if ( !$match ){
-				cli_echo('Skip...', ['fg' => 'yellow']);
-				echo PHP_EOL;	
+			$image_distortion = image_compare_get_distortion($profile['sample'], $file, true);
+			cli_echo('Distortion: ' . $image_distortion);
+			
+			// does not match a template
+			if ( $image_distortion > (float) $profile['distortion'] ){
+				cli_echo('Skip' . PHP_EOL);
 				continue;
-			}	
+			}
+		
+			if ( $debug )
+				$tmp = [ '_image_distortion' => $image_distortion ];
 		}
-	
-		if ( !$profile = rok_get_config($sample) )
-			cli_echo('rok_do_ocr() - Missing --job profile', array('header' => 'error'));
 
-		// start data for file
-		$tmp = [];
-		if ( $debug ){
-			$tmp = [
-				'_image' => basename($file),
-				'_distortion' => $image_distortion ?? null,	
-			];
-		}
+		// determine image scale factor for crop points
+		$scale_factor = rok_image_scale_factor($file, $profile['sample']);
 
 		// slice image for parts
 		$images = [];
@@ -148,42 +137,53 @@ function rok_do_ocr(array $args){
 			if ( empty($schema['crop']) )
 				continue;
 
-			// cut image for this key
-			$images[$key] = ROK_PATH_TMP . '/' . md5($key.$file) . '.png';
-			image_crop($file, $images[$key], $schema['crop']);
+			// crop image location
+			$images[$key] = ROK_PATH_TMP . '/' . md5($file) . '-' . $key . '.' . pathinfo($file)['extension'];
+
+			// adjust crop scale
+			$crop = rok_scale_factor($schema['crop'], $scale_factor);
+			
+			// crop
+			image_crop($file, $images[$key], $crop);
 		}
 
 		// ocr each image part
 		foreach ( $images as $key => $image ){
 			// ocr
 			$ocr = (new TesseractOCR($image))
+				->tessdataDir($tessdata)
+	
+				// provided by profile
 				->configFile(($profile['ocr_schema'][$key]['config']??null))
 				->whitelist(($profile['ocr_schema'][$key]['whitelist']??null))
-				// language, bug with rus
-				// ->lang('eng','ara','chi_sim','chi_tra','fra','deu','ind','ita','jpn','kor','msa','por','rus','spa','spa_old','tha','tur', 'vie')
-				->lang('eng', 'jpn')
 
-				// our dictionary
-				// ->userWords(ROK_PATH_INPUT . '/words.txt')
-				// ->userPatterns(ROK_PATH_INPUT . '/patterns.txt')
+				// TODO: Check language bug with $rus
+				// RoK Supported: English, Arabic, Chinese, French, German, Indonesian, Italian, Japanese, Kanuri, Korean, Malay, Portuguese, Russian, Simplified Chinese, Spanish, Thai, Traditional Chinese, Turkish, Vietnamese
+				->lang($eng, $ara, $chi_sim, $chi_tra, $fra, $deu, $ind, $ita, $jpn, $kor, $msa, $por, $rus, $spa, $spa_old, $tha, $tur, $vie)
 
-				// TESTING:
-				->oem($oem)       
-				->psm($psm)
+				// dictionary
+				->userWords($user_words)
+				->userPatterns($user_patterns)
 
-				// lets go!
+				// settings:
+				->oem((int) ($oem ?? $profile['oem']) )       
+				->psm((int) ($psm ?? $profile['psm']) )
+
+				// Reading Rainbow!
 				->run();
 			
-			cli_echo('OCR: ' . $key . ' ' . cli_txt_style(basename($image), ['fg' => 'light_gray']));
+			cli_echo('OCR: ' . cli_txt_style(basename($image), ['fg' => 'light_gray']));
 			$tmp[$key] = text_remove_extra_lines($ocr);
 
 			if ( isset($profile['ocr_schema'][$key]['callback']) and function_exists($profile['ocr_schema'][$key]['callback']) )
 				$tmp[$key] = $profile['ocr_schema'][$key]['callback']($tmp[$key]);
 
-			if ( $debug )
-				echo $tmp[$key] . PHP_EOL;
+			cli_debug_echo( $tmp[$key] );
+				
+			if ( !$debug )
+				unset($image);
 		}
-
+	
 		// add entry to others
 		$data[] = $tmp;
 
@@ -192,14 +192,11 @@ function rok_do_ocr(array $args){
 	}
 
 	// add user words
-	if ( $build_user_words ){
-		$user_words_file = ROK_PATH_OUTPUT . '/' . $job . '-user-words.txt';
-		$args['output']['user_words_file'] = rok_ocr_build_user_words($user_words, ['name'], $user_words_file);
-	}
+	if ( $build_user_words )
+		$args['output']['user_words_file'] = rok_ocr_build_user_words($user_words, ['name'], $build_user_words);
 
 	// table output
-	if ( is_cli() )
-		rok_cli_table(($profile['table']??null), $data);
+	rok_cli_table(($profile['table']??null), $data);
 
 	// csv
 	if ( isset($profile['csv_headers']) ){
@@ -209,6 +206,93 @@ function rok_do_ocr(array $args){
 	}
 
 	return ['data' => $data, 'job' => $args];
+}
+
+function rok_scale_factor($crop, $scale){
+	$out = [];
+	foreach ( $crop as $n )
+		$out[] = round( $n * $scale );
+
+	return $out;
+}
+
+function rok_image_scale_factor($img1, $img2){
+	list( $img1_width, $img1_height ) = getimagesize($img1);
+	list( $img2_width, $img2_height ) = getimagesize($img2);
+
+	return number_format($img1_height/$img2_height, 2);
+}
+
+// prep file for scan
+/*
+	1. AutoCrop
+	2. Compare image
+		1. reduce size
+	    2. add slight blur
+    3. TRUE: Return new image to files_ocr
+    4. FALSE: Delete modified compare file 
+    4. FALSE: unset($file), continue() $files_oc
+*/
+function rok_ocr_prep_image($file, $output_path, $profile){
+	$def = [
+		'autocrop' => null,
+	];
+	$profile = array_merge($def, $profile);
+
+	if ( $profile['autocrop'] ){
+		$file_crop = rok_ocr_get_img_mod_path($file, $output_path);
+		new AutoCrop($file, $file_crop);
+		return $file_crop;
+	}
+
+	return $file;	
+}
+
+function rok_ocr_get_img_mod_path($file, $path, $mod=null){
+	return $path . '/' . pathinfo($file)['filename'] . ($mod ? '-' . $mod : null ) . '.' . pathinfo($file)['extension'];
+}
+
+// language var builder
+function rok_ocr_lang_args($langs=['eng']){
+	// explode if string
+	if ( is_string($langs) )
+		$langs = explode(',', $langs);
+	
+	// supported langs
+	$def = [
+		'eng' => null,
+		'ara' => null,
+		'chi_sim' => null,
+		'chi_tra' => null,
+		'fra' => null,
+		'deu' => null,
+		'ind' => null,
+		'ita' => null,
+		'jpn' => null,
+		'kor' => null,
+		'msa' => null,
+		'por' => null,
+		'rus' => null,
+		'spa' => null,
+		'spa_old' => null,
+		'tha' => null,
+		'tur' => null,
+		'vie' => null,
+	];
+
+	// if lang is supported
+	$output = [];
+	foreach ( $langs as $lang ) {
+		if ( array_key_exists($lang, $def) )
+			$output[$lang] = $lang;
+	}
+	
+	// return default lang if none matched
+	if ( empty($output) )
+		$output = [ ROK_LANG => ROK_LANG ];
+
+	// return all keys
+	return array_merge($def, $output);	
 }
 
 // find interesting scenes
@@ -232,10 +316,17 @@ function rok_video_find_scene_change($files_input, $output_path){
 
 		cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'green']) . ' ' . $count);
 
-		rok_do_ffmpeg_cmd(['action' => 'interesting', 'input' => $file, 'output_path' => $output_path, 'frames' => rok_get_config('frames')]);
+		rok_do_ffmpeg_cmd([
+			'action' => 'interesting',
+			'input' => $file,
+			'output_path' => $output_path,
+		]);
 	}
 }
 
+/*
+ *	User outputs
+ */
 // make CSV
 function rok_build_csv($data, $headers, $output){
 	if ( !$headers or empty($headers) )
@@ -287,7 +378,10 @@ function rok_ocr_build_user_words($data, $keys, $output){
 	return false;
 }
 
-function rok_get_files_ocr($path, $tmp_path=null, $offset=0, $limit=-1){
+/*
+ *	Build file lists
+ */
+function rok_get_files_ocr($path, $tmp_path=null, $video=true, $offset=0, $limit=-1){
 	// error checks
 	if ( !$path or !is_dir($path) )
 		cli_echo('rok_get_dir() - DIR does not exist ' . $path, array('header' => 'error'));
@@ -306,37 +400,19 @@ function rok_get_files_ocr($path, $tmp_path=null, $offset=0, $limit=-1){
 
 			// add exported images from video
 			case 'video':
-				if ( !$tmp_path )
-					$tmp_path = ROK_PATH_TMP;
+				if ( $video ){
+					if ( !$tmp_path )
+						$tmp_path = ROK_PATH_TMP;
 
-				$save_to = $tmp_path . '/' . pathinfo($file)['filename']; 
-				rok_video_find_scene_change($file, $save_to);
+					$save_to = $tmp_path . '/' . pathinfo($file)['filename']; 
+					rok_video_find_scene_change($file, $save_to);
 
-				// add these video files to total files
-				$files_output+= rok_get_files_ocr($save_to);
+					// add these video files to total files
+					$files_output+= rok_get_files_ocr($save_to);
+				}
 			break;
 		}
 	}
 
 	return $files_output;
-}
-
-function is_mime_content_type($file=null, $type='image'){
-	if ( !is_file($file) )
-		return false;
-
-	$mime = mime_content_type($file);
-	
-	if ( substr($mime, 0, strlen($type)) == $type )
-		return true;
-
-	return false;
-}
-
-function get_mime_content_type($file=null){
-	foreach ( ['image', 'video'] as $type )
-		if ( is_mime_content_type($file, $type) )
-			return $type;
-
-	return false;
 }
