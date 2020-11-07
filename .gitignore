@@ -9,4 +9,4 @@ composer.lock
 .DS_Store
 .idea
 *.todo
-my-config.php
+config.local.php
