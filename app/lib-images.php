@@ -1,13 +1,8 @@
 <?php
-use Treinetic\ImageArtist\lib\Image;
-use Treinetic\ImageArtist\lib\PolygonShape;
-use Treinetic\ImageArtist\lib\Text\TextBox;
-use Treinetic\ImageArtist\lib\Text\Color;
-use Treinetic\ImageArtist\lib\Text\Font;
-use Treinetic\ImageArtist\lib\Overlays\Overlay;
-use Treinetic\ImageArtist\lib\Text\Write\WriteFactory;
-use Treinetic\ImageArtist\lib\Text\Write\GDWritingStrategy;
-use Treinetic\ImageArtist\lib\Text\Write\ImagickWritingStrategy;
+declare(strict_types=1);
+namespace RoK\OCR;
+
+use  \Treinetic\ImageArtist\lib\Image;
 
 /*
  *	Imagick
@@ -15,15 +10,15 @@ use Treinetic\ImageArtist\lib\Text\Write\ImagickWritingStrategy;
 // compare images
 // https://stackoverflow.com/questions/37581147/percentage-of-pixels-that-have-changed-in-an-image-in-php#37594159
 // https://stackoverflow.com/questions/4684023/how-to-check-if-an-integer-is-within-a-range-of-numbers-in-php
-function image_compare_get_distortion($image_path_1=null, $image_path_2=null, $resize=true){
+function image_compare_get_distortion(string $image_path_1, string $image_path_2, bool $resize=true): float{
 	// check for errors
 	foreach ( [$image_path_1, $image_path_2] as $image )
 		if ( !$image or !file_exists($image) )
-			cli_echo('File not found. ' . $image, ['header' => 'error', 'function' => __FUNCTION__]);
+			\carmelosantana\CliTools\cli_echo('File not found. ' . $image, ['header' => 'error', 'function' => __FUNCTION__]);
 
 	// load up
-	$image1 = new Imagick($image_path_1);
-	$image2 = new Imagick($image_path_2);
+	$image1 = new \Imagick($image_path_1);
+	$image2 = new \Imagick($image_path_2);
 
 	$w1 = $image1->getImageWidth();
 	$h1 = $image1->getImageHeight();
@@ -35,7 +30,7 @@ function image_compare_get_distortion($image_path_1=null, $image_path_2=null, $r
 	}
 
 	// compare
-	$result = $image1->compareImages($image2,Imagick::METRIC_MEANABSOLUTEERROR);
+	$result = $image1->compareImages($image2, \Imagick::METRIC_MEANABSOLUTEERROR);
 	$p1 = $image1->getImageProperties();
 	return (float) $p1['distortion'];
 }
@@ -43,7 +38,7 @@ function image_compare_get_distortion($image_path_1=null, $image_path_2=null, $r
 /*
  * Treinetic Image()
  */
-function image_crop(string $file, string $output, array $crop){
+function image_crop(string $file, string $output, array $crop): string{
 	$image = new Image($file);
 
 	if ( !$crop or empty($crop) )
@@ -56,7 +51,7 @@ function image_crop(string $file, string $output, array $crop){
 	return $output;
 }
 
-function image_scale(string $file, string $output, int $scale){
+function image_scale(string $file, string $output, int $scale): string{
 	$image = new Image($file);
 
 	if ( $scale )
