@@ -1,5 +1,9 @@
 <?php
-function rok_do_ffmpeg_cmd(array $args){
+declare(strict_types=1);
+namespace RoK\OCR;
+use carmelosantana\CliTools as CliTools;
+
+function ffmpeg_cmd(array $args): void {
 	$def = [
 		// task
 		'action' => null,
@@ -18,17 +22,11 @@ function rok_do_ffmpeg_cmd(array $args){
     $args = array_merge($def, $args);
     extract($args);
 
-	// error checks
-	if ( !$input or !file_exists($input) )
-		cli_echo('$input file does not exist ' . $input_path, ['header' => 'error', 'function' => __FUNCTION__]);
-	if ( !$output_path or !is_dir($output_path) )
-		cli_echo('$output_path does not exist ' . $output_path, ['header' => 'error', 'function' => __FUNCTION__]);
-
 	// output file
 	$output_file = $output_path . '/' . pathinfo($input)['basename'];
 
 	// frames
-	$getID3 = new getID3;
+	$getID3 = new \getID3;
 	$input_info = $getID3->analyze($input);
 	$frames = round(round($input_info['video']['frame_rate'])*round($fps_multiplier));
 
@@ -61,6 +59,6 @@ function rok_do_ffmpeg_cmd(array $args){
 	}
 
 	// command
-	cli_echo($cmd, ['header' => 'FFmpeg']);	
+	CliTools\cli_debug_echo($cmd, ['header' => 'FFmpeg']);	
 	$output = exec($cmd);
 }
