@@ -21,7 +21,7 @@ function ocr(array $args, array $profile=[]): array {
 		'tmp_path' => null,					// cropped images, video screen shots
 
 		// output
-		'output_csv' => false,				// output csv file?
+		'output_csv' => (CliTools\is_cli() ? true : false),			// output csv file?
 		'output_user_words' => false,		// list of words generated from OCR data
 
 		// image processing
