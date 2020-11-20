@@ -1,90 +1,105 @@
 <?php
-declare(strict_types=1);
-namespace RoK\OCR;
-
 use thiagoalessio\TesseractOCR\TesseractOCR;
-use carmelosantana\CliTools as CliTools;
+use Treinetic\ImageArtist\lib\Image;
 
-/**
+/*
  * OCR
  */
 // primary ocr loop
-function ocr(array $args, array $profile=[]): array {
+function rok_do_ocr(array $args){
 	// def
 	$def = array(
 		// what are we doing
-		'job' => null,						// profile
+		'job' => null,
 
-		// storage paths
-		'input_path' => null,				// media source(s)
-		'output_path' => null,				// csv
-		'tmp_path' => null,					// cropped images, video screen shots
+		// crop schema and data points for OCR
+		'profile' => [],
 
-		// output
-		'output_csv' => false,				// output csv file?
-		'output_user_words' => false,		// list of words generated from OCR data
+		// profile overrides 
+		'oem' => null,
+		'psm' => null,
+		'distortion' => 0,
+		'video' => true,	// do we process videos?
+				
+		// callbacks
+		'callback_files_ocr' => null,
+
+		// files
+		'input_path' => ROK_PATH_INPUT,
+		'output_path' => ROK_PATH_OUTPUT,
+		'tmp_path' => ROK_PATH_TMP,
+		'offset' => 0,
+		'limit' => -1,
 
 		// image processing
-		'compare_to_sample' => true,		// enable?
-		'distortion' => 0,
-	
-		// video processing
-		'video' => true,					// enable?
+		'compare_to_sample' => true,
 
 		// TesseractOCR
-		'lang' => ROK_CLI_LANG,				// language model
-		'oem' => null,						// OCR Engine Mode
-		'psm' => null,						// Page Segmentation Method
-		'tessdata' => ROK_CLI_TESSDATA,		// path to tessdata
+		'lang' => 'eng',
+		'tessdata' => null,
+		'user_words' => null,
+		'user_patterns' => null,
 
-		// do we enable debug output?
-		'debug' => CliTools\get_arg('debug'),
+		// after OCR
+		'build_user_words' => false,
+
+		// internal vars
+		'debug' => false,
 	);
 
 	// args to vars
 	extract(array_merge($def, $args));
 
 	// extract langs
-	extract(ocr_setup_langs($lang));
-
-	// cleanup vars
-	$debug = filter_var($debug, FILTER_VALIDATE_BOOLEAN);
-	$video = filter_var($video, FILTER_VALIDATE_BOOLEAN);
-
-	// start vars
-	$data = [];
-	$count = 0;
+	extract(rok_ocr_lang_args($lang));
 
 	// always check if job is provided, if not config lookup will fail
-	if ( !$job ){
-		CliTools\cli_echo('Missing --job', ['header' => 'error', 'function' => __FUNCTION__]);
-		return $data;
+	if ( !$job )
+		cli_echo('Missing --job', ['header' => 'error', 'function' => __FUNCTION__]);
+
+	// check for profile
+	if ( !$profile ){
+		$profile = rok_get_config($job);
+
+		if ( !$profile )
+			cli_echo('Missing --job template', ['header' => 'error', 'function' => __FUNCTION__]);
 	}
 
 	// log any starting notes
-	CliTools\cli_echo('Starting ' . $job, ['format' => 'bold']);
+	cli_echo('Starting ' . $job, ['format' => 'bold']);
 
-	// check for profile
-	if ( empty($profile) ){
-		$profile = $GLOBALS['rok_config'][$job] ?? false;
+	// setup file for OCR
+	if ( is_file($input_path) ){
+		$args['files_ocr'] = [$input_path];
 
-		if ( !$profile ){
-			CliTools\cli_echo('Missing --job $profile', ['header' => 'error', 'function' => __FUNCTION__]);
-			return $data;
-		}
+	// setup path to search for files
+	} elseif ( is_dir($input_path) ){
+		$args['files_ocr'] = rok_get_files_ocr($input_path, $tmp_path, $video);
+
+	// issue with file or path
+	} else {
+		cli_echo('Missing $input_path', ['header' => 'error', 'function' => __FUNCTION__]);
+
 	}
 
-	// notify on no input path
-	ocr_setup_paths($input_path, $output_path, $tmp_path, $debug);
+	// if files_ocr contains no files
+	if ( !isset($args['files_ocr']) or !$args['files_ocr'] or empty($args['files_ocr']))
+		cli_echo('Missing $args[\'files_ocr\']', ['header' => 'error', 'function' => __FUNCTION__]);
 
+	// start vars
+	$data = $output = [];
+	$count = 0;
+	
 	// process each image file
-	foreach (get_files_ocr($input_path, $tmp_path, $video) as $file) {
-		// should only be an image
-		if ( !is_mime_content_type($file, 'image') ) continue;
+	foreach ($args['files_ocr'] as $file) {
+		rok_callback($callback_files_ocr, $file);
+
+		// check if file, mime type match and SKIP_DOTS
+		if ( !is_mime_content_type($file, 'image') or is_dot_file($file) ) continue;	// skip non image formats
 
 		// persistent
 		$count++;
-		CliTools\cli_echo( basename($file), ['header' => (string) $count, 'fg' => 'green'] );
+		cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'light_green']) . ' #' . $count);
 		
 		// start/reset data for entry
 		$tmp = [];
@@ -92,20 +107,16 @@ function ocr(array $args, array $profile=[]): array {
 			$tmp = [ '_image' => basename($file) ];
 
 		// prep image
-		$file = image_prep_ocr($file, $tmp_path, $profile);
+		$file = rok_ocr_prep_image($file, $tmp_path, $profile);
 
 		// match image to sample retrieve templates
 		if ( $compare_to_sample ){
 			$image_distortion = image_compare_get_distortion($profile['sample'], $file, true);
-			CliTools\cli_echo('Distortion: ' . $image_distortion);
+			cli_echo('Distortion: ' . $image_distortion);
 			
-			if ( $image_distortion > (float) ($distortion > 0 ? $distortion : $profile['distortion']) ){
-				CliTools\cli_echo('Skip' . PHP_EOL);
-
-				// TODO: Only remove file that doesn't meet compare threshold if from video
-				// delete_file($file, $debug);
-
-				// skip to next
+			// does not match a template
+			if ( $image_distortion > (float) $profile['distortion'] ){
+				cli_echo('Skip' . PHP_EOL);
 				continue;
 			}
 		
@@ -114,7 +125,7 @@ function ocr(array $args, array $profile=[]): array {
 		}
 
 		// determine image scale factor for crop points
-		$scale_factor = get_image_scale_factor($file, $profile['sample']);
+		$scale_factor = rok_image_scale_factor($file, $profile['sample']);
 
 		// slice image for parts
 		$images = [];
@@ -127,10 +138,10 @@ function ocr(array $args, array $profile=[]): array {
 				continue;
 
 			// crop image location
-			$images[$key] = $tmp_path . '/' . md5($file) . '-' . $key . '.' . pathinfo($file)['extension'];
+			$images[$key] = ROK_PATH_TMP . '/' . md5($file) . '-' . $key . '.' . pathinfo($file)['extension'];
 
 			// adjust crop scale
-			$crop = crop_scale_factor($schema['crop'], $scale_factor);
+			$crop = rok_scale_factor($schema['crop'], $scale_factor);
 			
 			// crop
 			image_crop($file, $images[$key], $crop);
@@ -151,8 +162,8 @@ function ocr(array $args, array $profile=[]): array {
 				->lang($eng, $ara, $chi_sim, $chi_tra, $fra, $deu, $ind, $ita, $jpn, $kor, $msa, $por, $rus, $spa, $spa_old, $tha, $tur, $vie)
 
 				// dictionary
-				// ->userWords($user_words)
-				// ->userPatterns($user_patterns)
+				->userWords($user_words)
+				->userPatterns($user_patterns)
 
 				// settings:
 				->oem((int) ($oem ?? $profile['oem']) )       
@@ -160,22 +171,19 @@ function ocr(array $args, array $profile=[]): array {
 
 				// Reading Rainbow!
 				->run();
-
-			CliTools\cli_echo( basename($image), ['header' => 'OCR', 'fg' => 'light_gray'] );
+			
+			cli_echo('OCR: ' . cli_txt_style(basename($image), ['fg' => 'light_gray']));
 			$tmp[$key] = text_remove_extra_lines($ocr);
 
-			if ( isset($profile['ocr_schema'][$key]['callback']) )
-				apply_callback($profile['ocr_schema'][$key]['callback'], $tmp[$key]);
+			if ( isset($profile['ocr_schema'][$key]['callback']) and function_exists($profile['ocr_schema'][$key]['callback']) )
+				$tmp[$key] = $profile['ocr_schema'][$key]['callback']($tmp[$key]);
 
-			CliTools\cli_debug_echo( $tmp[$key] );
+			cli_debug_echo( $tmp[$key] );
 				
-			// remove ocr snippet
-			delete_file($image, $debug);
+			if ( !$debug )
+				unset($image);
 		}
 	
-		// TODO: Only remove file that matched sample if from video
-		// delete_file($file, $debug);
-
 		// add entry to others
 		$data[] = $tmp;
 
@@ -184,21 +192,68 @@ function ocr(array $args, array $profile=[]): array {
 	}
 
 	// add user words
-	if ( $output_user_words )
-		output_user_words($data, $output_user_words, $output_path);
+	if ( $build_user_words )
+		$args['output']['user_words_file'] = rok_ocr_build_user_words($user_words, ['name'], $build_user_words);
 
 	// table output
-	CliTools\cli_echo_table(($profile['table']??null), $data);
+	rok_cli_table(($profile['table']??null), $data);
 
 	// csv
-	if ( $output_csv )
-		output_csv($data, $output_csv, $output_path);
+	if ( isset($profile['csv_headers']) ){
+		$csv_file = ROK_PATH_OUTPUT . '/' . $job . '-' . time() . '.csv';
+		if ( !$args['output']['csv'] = rok_build_csv($data, $profile['csv_headers'], $csv_file) )
+			cli_echo("Can't close php://output", ['header' => 'error']);
+	}
 
-	return $data;
+	return ['data' => $data, 'job' => $args];
 }
 
-// populate language variables
-function ocr_setup_langs($langs=['eng']): array {
+function rok_scale_factor($crop, $scale){
+	$out = [];
+	foreach ( $crop as $n )
+		$out[] = round( $n * $scale );
+
+	return $out;
+}
+
+function rok_image_scale_factor($img1, $img2){
+	list( $img1_width, $img1_height ) = getimagesize($img1);
+	list( $img2_width, $img2_height ) = getimagesize($img2);
+
+	return number_format($img1_height/$img2_height, 2);
+}
+
+// prep file for scan
+/*
+	1. AutoCrop
+	2. Compare image
+		1. reduce size
+	    2. add slight blur
+    3. TRUE: Return new image to files_ocr
+    4. FALSE: Delete modified compare file 
+    4. FALSE: unset($file), continue() $files_oc
+*/
+function rok_ocr_prep_image($file, $output_path, $profile){
+	$def = [
+		'autocrop' => null,
+	];
+	$profile = array_merge($def, $profile);
+
+	if ( $profile['autocrop'] ){
+		$file_crop = rok_ocr_get_img_mod_path($file, $output_path);
+		new AutoCrop($file, $file_crop);
+		return $file_crop;
+	}
+
+	return $file;	
+}
+
+function rok_ocr_get_img_mod_path($file, $path, $mod=null){
+	return $path . '/' . pathinfo($file)['filename'] . ($mod ? '-' . $mod : null ) . '.' . pathinfo($file)['extension'];
+}
+
+// language var builder
+function rok_ocr_lang_args($langs=['eng']){
 	// explode if string
 	if ( is_string($langs) )
 		$langs = explode(',', $langs);
@@ -234,115 +289,47 @@ function ocr_setup_langs($langs=['eng']): array {
 	
 	// return default lang if none matched
 	if ( empty($output) )
-		$output = [ ROK_CLI_OCR_LANG => ROK_CLI_OCR_LANG ];
+		$output = [ ROK_LANG => ROK_LANG ];
 
 	// return all keys
 	return array_merge($def, $output);	
 }
 
-// setup input + output paths
-function ocr_setup_paths($input_path, &$output_path, &$tmp_path, $debug): void {
-	if ( !is_dir($input_path) and !is_file($input_path) ){
-		CliTools\cli_echo('--input_path', ['header' => 'error', 'function' => __FUNCTION__]);
-		return;
-	}
-
-	// get residing folder if file, we'll add other files there
-	if ( is_file($input_path) )
-		$input_path = dirname($input_path);
-
-	if ( !$output_path ){
-		$output_path = $input_path . '/output';
-		@mkdir($output_path, 0775, true);
-
-		if ( !is_dir($output_path) )
-			CliTools\cli_echo('Creating $output_path ' . $output_path, ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
-	}
-
-	// temporary files
-	if ( !$tmp_path and $debug ){
-		$tmp_path = $input_path . '/tmp';
-		@mkdir($tmp_path, 0775, true);
-
-	} else {
-		$tmp_path = sys_get_temp_dir();
-
-	}
-
-	if ( !is_dir($tmp_path) )
-		CliTools\cli_echo('Missing --tmp_path ' , ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
-}
-
-/**
- * Image scaling
- */
-// apply scale factor to crop points
-function crop_scale_factor(array $crop, float $scale): array {
-	$out = [];
-	foreach ( $crop as $n )
-		$out[] = round( $n * $scale );
-
-	return $out;
-}
-
-// get scale factor between 2 images
-function get_image_scale_factor(string $img1, string $img2): float {
-	list( $img1_width, $img1_height ) = getimagesize($img1);
-	list( $img2_width, $img2_height ) = getimagesize($img2);
-
-	return round(($img1_height/$img2_height), 5);
-}
-
-/**
- * Image prep for OCR
- */
-// prepare image for OCR read
-function image_prep_ocr(string $file, string $output_path, array $profile): string {
-	$def = [
-		'autocrop' => null,
-	];
-	$profile = array_merge($def, $profile);
-
-	if ( $profile['autocrop'] ){
-		$file_crop = $output_path . '/' . pathinfo($file)['basename'];
-		new \AutoCrop($file, $file_crop);
-		return $file_crop;
-	}
-
-	return $file;	
-}
-
-/**
- * Video
- */
 // find interesting scenes
-function video_find_scene_change(string $file, string $output_path): bool {
-	// skip non video formats
-	if ( !is_mime_content_type( $file, 'video') )
-		return false;
+function rok_video_find_scene_change($files_input, $output_path){
+	if ( is_string($files_input) )
+		$files_input = [$files_input];
 
-	ffmpeg_cmd([
-		'action' => 'interesting',
-		'input' => $file,
-		'output_path' => $output_path,
-	]);
+	$count = 0;
+	$files = [];
+	foreach ($files_input as $file) {
+		if ( !is_file($file) ) continue;	// maybe we've already removed this file
+		if ( is_dot_file($file) ) continue;	// manually SKIP_DOTS
 
-	return true;
+		// skip non video formats
+		if ( !is_mime_content_type( $file, 'video') ) continue;
+
+		$count++;
+
+		if ( !is_dir($output_path) and !mkdir($output_path, 0775, true) )
+			cli_echo('!mkdir ' . $output_path, ['header' => 'error']);
+
+		cli_echo(cli_txt_style('['.basename($file).']', ['fg' => 'green']) . ' ' . $count);
+
+		rok_do_ffmpeg_cmd([
+			'action' => 'interesting',
+			'input' => $file,
+			'output_path' => $output_path,
+		]);
+	}
 }
 
 /*
  *	User outputs
  */
 // make CSV
-function output_csv(array $data, $headers=[], string $output_path): bool {
-	$output_path.= '/' . time() . '.csv';
-
-	// we need at least 1 record
-	if ( !isset($data[0]) )
-		return false;
-
-	// build headers if none are provided
-	if ( empty($headers) or !is_array($headers) )
+function rok_build_csv($data, $headers, $output){
+	if ( !$headers or empty($headers) )
 		$headers = array_keys($data[0]);
 	
 	// build csv
@@ -355,8 +342,12 @@ function output_csv(array $data, $headers=[], string $output_path): bool {
 		$csv[] = $tmp;
 	}
 
+	// make file name if non exist
+	if ( !$output )
+		$output = ROK_PATH_OUTPUT . '/' . time() . '.csv';
+
 	// save to CSV
-	$fp = fopen($output_path, 'w');
+	$fp = fopen($output, 'w');
 	fputcsv($fp, array_keys($headers));
 	foreach($csv as $row) {
 		fputcsv($fp, $row);
@@ -364,24 +355,14 @@ function output_csv(array $data, $headers=[], string $output_path): bool {
 
 	// on success return path of finished CSV
 	if ( fclose($fp) )
-		return true;
-
-	CliTools\cli_echo('Can\'t close php://output', ['header' => 'error']);
-
+		return $output;
+		
 	// something failed while writing
 	return false;
 }
 
 // build user words
-function output_user_words(array $data, $keys=[], string $output_path): bool {
-	// explode if string
-	if ( is_string($keys) )
-		$keys = explode(',', $keys);
-		
-	// no keys provided
-	if ( !is_array($keys) )
-		return false;
-
+function rok_ocr_build_user_words($data, $keys, $output){
 	foreach ( $data as $entry ) {
 		foreach ( $keys as $key ) {
 			if ( isset($entry[$key]) )
@@ -390,9 +371,9 @@ function output_user_words(array $data, $keys=[], string $output_path): bool {
 	}
 	
 	// save user words to file
-	$output_path.= '/' . time() . '-user-words.txt';
-	if ( file_put_contents($output_path, implode(PHP_EOL, $user_words)) )
-		return true;
+	$output = ROK_PATH_OUTPUT . '/' . $job . '-user-words.txt';
+	if ( file_put_contents($output, implode(PHP_EOL, $user_words)) )
+		return $output;
 
 	return false;
 }
@@ -400,37 +381,16 @@ function output_user_words(array $data, $keys=[], string $output_path): bool {
 /*
  *	Build file lists
  */
-// generic file iterator + error messages
-function get_files(string $path, int $limit=-1, int $offset=0): array {
+function rok_get_files_ocr($path, $tmp_path=null, $video=true, $offset=0, $limit=-1){
 	// error checks
 	if ( !$path or !is_dir($path) )
-		cli_echo('DIR does not exist ' . $path, ['header' => 'error', 'function' => __FUNCTION__]);
+		cli_echo('rok_get_dir() - DIR does not exist ' . $path, array('header' => 'error'));
 
 	// files
-	$files = CliTools\sort_filesystem_iterator($path, $offset, $limit);
+	$files = sort_filesystem_iterator($path, $offset, $limit);
+	$files_output = [];
 	cli_echo('Files found: '. count($files));
 
-	return $files;
-}
-
-// get files to consider for OCR
-function get_files_ocr(string $input_path, string $tmp_path=null, bool $video=true): array {
-	// setup files
-	if ( is_file($input_path) ){
-		$files = [$input_path];
-
-	// setup path to search for files
-	} elseif ( is_dir($input_path) ){
-		$files = CliTools\sort_filesystem_iterator($input_path);
-
-	// not sure what we have
-	} else {
-		return [];
-
-	}
-
-	// go through DIR
-	$files_output = [];
 	foreach ( $files as $file ){
 		switch ( get_mime_content_type($file) ){
 			// add all images
@@ -440,78 +400,19 @@ function get_files_ocr(string $input_path, string $tmp_path=null, bool $video=tr
 
 			// add exported images from video
 			case 'video':
-				echo 1;
 				if ( $video ){
-					$save_to = $tmp_path . '/' . pathinfo($file)['filename'];
-					@mkdir($save_to, 0775, true);
-					video_find_scene_change($file, $save_to);
+					if ( !$tmp_path )
+						$tmp_path = ROK_PATH_TMP;
 
-					// TODO: Remove tmp DIR
+					$save_to = $tmp_path . '/' . pathinfo($file)['filename']; 
+					rok_video_find_scene_change($file, $save_to);
 
 					// add these video files to total files
-					$files_output+= get_files_ocr($save_to);
+					$files_output+= rok_get_files_ocr($save_to);
 				}
 			break;
 		}
 	}
 
 	return $files_output;
-}
-
-/*
- *	Mimetype
- */
-function is_mime_content_type(string $file, string $type='image'): bool {
-	if ( !is_file($file) )
-		return false;
-
-	$mime = mime_content_type($file);
-	
-	if ( substr($mime, 0, strlen($type)) == $type )
-		return true;
-
-	return false;
-}
-
-function get_mime_content_type(string $file){
-	foreach ( ['image', 'video'] as $type )
-		if ( is_mime_content_type($file, $type) )
-			return $type;
-
-	return false;
-}
-
-/*
- *	OCR Callbacks
- */
-function text_remove_non_numeric(string $string): string {
-	return preg_replace('/[^0-9,.]+/', '', $string);
-}
-
-function text_remove_extra_lines(string $string): string {
-	return preg_replace("/(^[\r\n]*|[\r\n]+)[\s\t]*[\r\n]+/", "\n", $string);
-}
-
-/**
- *	Helpers
- */
-function apply_callback($function, &$arg): void {
-	if ( !$function )
-		return;
-
-	if ( !function_exists($function) )
-		$function = __NAMESPACE__ . '\\' . $function;
-
-	if ( function_exists($function) ) {
-		$arg = $function($arg);
-
-	} else {
-		CliTools\cli_echo($function, ['header' => 'error', 'function' => __FUNCTION__]);
-		
-	}
-}
-
-function delete_file(string $file, bool $debug=false): void {
-	if ( !$debug )
-		unlink($file);
 }
