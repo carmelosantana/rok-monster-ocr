@@ -1,9 +1,11 @@
 <?php
-use jc21\CliTable;
-use jc21\CliTableManipulator;
+declare(strict_types=1);
+namespace RoK\OCR;
+
+use carmelosantana\CliTools as CliTools;
 
 // logo
-function rok_cli_logo($style=true){
+function echo_logo(bool $echo=true){
 	$logo = '
  _____     _____    _____             _           
 | __  |___|  |  |  |     |___ ___ ___| |_ ___ ___ 
@@ -11,97 +13,47 @@ function rok_cli_logo($style=true){
 |__|__|___|__|__|  |_|_|_|___|_|_|___|_| |___|_| ' . PHP_EOL;
 	$desc = 'Data aggregator and analysis tools.' . PHP_EOL . PHP_EOL;
 
-    $version = 'v' . ROK_VER . PHP_EOL;
+    $version = 'v' . ROK_CLI_VER . PHP_EOL;
 
-	if ( $style )
-		return cli_txt_style($logo, ['fg' => 'green', 'style' => 'bold']) . cli_txt_style($version, ['fg' => 'dark_gray']) . cli_txt_style($desc, ['fg' => 'yellow']);
+	$out = null;
+	$out.= CliTools\text_style($logo, ['fg' => 'green', 'style' => 'bold']);
+	$out.= CliTools\text_style($version, ['fg' => 'dark_gray']);
+	$out.= CliTools\text_style($desc, ['fg' => 'yellow']);
 
-	return $logo . $desc;
+	if ( !$echo )
+		return $echo;
+
+	echo $out;
 }
 
 // init
-function rok_init(array $args=[]){
-	if ( is_cli() ){
-		// @important for padding
-		mb_internal_encoding('utf-8');
-		
-		// get args
-		cli_parse_get();
+function init(array $args=[]): void{
+	if ( CliTools\is_cli() ){
+		// TODO: Still testing?
+		gc_disable();
 
-		// setup php
-		cli_php_setup();		
+		// get args
+		CliTools\parse_get();
+
+		// debug
+		if ( CliTools\get_arg('debug') ){
+			ini_set('display_errors', '1');
+			ini_set('display_startup_errors', '1');
+			error_reporting(E_ALL);
+		}
 	}
 
 	// welcome
-	rok_cli_text('logo_version');
-
-	// exec
-	rok_bin($args);
-
-	// goodbye
-	rok_cli_text('exit');
-}
-
-// rough
-function rok_bin(array $args=[]){
-	// change DIR
-	chdir(ROK_PATH_TMP);
+	echo_logo();
 
 	// add CLI args
 	if ( empty($args) )
 	    $args = array_merge($args, $_GET);    
 
-	return rok_do_ocr($args);
-}
+	// exec
+	ocr($args);
 
-function rok_cli_text($text=null, $echo=true){
-	$out = null;
-
-	switch($text){
-		case 'logo_version':
-			$out = rok_cli_logo();
-			break;
-
-		case 'exit':
-			$out.= PHP_EOL . cli_echo('Finished.', ['fg' => 'green', 'style' => 'bold', 'echo' => false ]);
-			$out.= 'Peak memory: ' . format_bytes(memory_get_peak_usage()) . PHP_EOL . PHP_EOL;
-			$out.= cli_echo_array(
-				// schema
-				array(
-					'love' => array(
-						'title' => cli_txt_style('Made with ', ['fg' => 'cyan', 'style' => 'bold']).cli_txt_style('♥', ['fg' => 'red', 'style' => 'bold']).cli_txt_style(' in NY', ['fg' => 'cyan', 'style' => 'bold']),
-						'size' => 17,
-					)
-				),
-
-				// data
-				false,
-
-				// args
-				array(
-					'header' => true,
-					'echo' => false,
-				)
-			);
-			$out.= PHP_EOL;
-			break;
-	}
-
-	if ( $echo )
-		echo $out;
-
-	return $out;
-}
-
-function rok_cli_table($schema=null, $data=null){
-	if ( !$schema or !is_cli() )
-		return false;
-
-	$table = new CliTable;
-	$table->setTableColor('blue');
-	$table->setHeaderColor('cyan');
-	foreach ( $schema as $tbl_schema )
-		$table->addField($tbl_schema[0], $tbl_schema[1], ($tbl_schema[2] ? new CliTableManipulator($tbl_schema[2]) : false), $tbl_schema[3]);
-	$table->injectData($data);
-	$table->display();	
+	// goodbye
+	CliTools\cli_echo_footer();
+	CliTools\cli_echo_made_with_love('NY');
 }
