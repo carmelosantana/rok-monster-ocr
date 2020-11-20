@@ -1,6 +1,13 @@
 <?php
+declare(strict_types=1);
+namespace carmelosantana\CliTools;
+
+use jc21\CliTable;
+use jc21\CliTableManipulator;
+use Wujunze\Colors;
+
 /**
- * CLI
+ * Output
  */
 function cli_echo($msg=null, $args=[]){
     $def = array(
@@ -22,7 +29,7 @@ function cli_echo($msg=null, $args=[]){
         'exit' => false,
         'write' => true,
         'stdin' => [],
-        'debug' => cli_get_arg('debug'),
+        'debug' => get_arg('debug'),
     );
 
     // args to vars
@@ -44,7 +51,7 @@ function cli_echo($msg=null, $args=[]){
         switch ( $header ){
             case 'error':
                 if ( $function )
-                   $msg = $function . ' - ' . $msg;                
+                   $msg = $function . ' ' . $msg;                
             break;            
         }
     }
@@ -54,7 +61,7 @@ function cli_echo($msg=null, $args=[]){
     if ( ($msg or $header) and !$done ){
         switch ($args['header']) {
             case 'error':
-                $out = _cli_echo_padding($msg, $args);
+                $out = _echo_padding($msg, $args);
                 break;
 
              case 'debug':
@@ -62,7 +69,7 @@ function cli_echo($msg=null, $args=[]){
                     return false;
 
             default:
-                $out = $time.cli_txt_style(($header?_cli_echo_header($header):''), $args+['style' => 'bold']).cli_txt_style($msg, $args);
+                $out = $time.text_style(($header?_echo_header($header):''), $args+['style' => 'bold']).text_style($msg, $args);
                 break;
         }
     }
@@ -88,7 +95,7 @@ function cli_echo($msg=null, $args=[]){
     }
         
     // cya buddy
-    if ( $exit or $header == 'error' )
+    if ( $exit or $header == 'fatal_error' )
         die(PHP_EOL);
 
     // just return it
@@ -122,7 +129,7 @@ function cli_echo_array($schema=null, $data=null, $args=[]){
 
     	foreach ($schema as $key => $meta) {
     		$bar.= str_pad_unicode('', $meta['size']+2, '-') . '+';
-    		$out.= cli_txt_style(str_pad($meta['title'], $meta['size']), ['style' => 'bold']) . ' | ';
+    		$out.= text_style(str_pad($meta['title'], $meta['size']), ['style' => 'bold']) . ' | ';
     	}
 		$out.= PHP_EOL;
     	$bar.= PHP_EOL;
@@ -174,7 +181,70 @@ function cli_echo_array($schema=null, $data=null, $args=[]){
 	return $output;
 }
 
-function cli_txt_style(string $txt, array $args){
+function cli_echo_table($schema=null, $data=null){
+	if ( !$schema or !is_cli() )
+		return false;
+
+	$table = new CliTable;
+	$table->setTableColor('blue');
+	$table->setHeaderColor('cyan');
+	foreach ( $schema as $tbl_schema )
+		$table->addField($tbl_schema[0], $tbl_schema[1], ($tbl_schema[2] ? new CliTableManipulator($tbl_schema[2]) : false), $tbl_schema[3]);
+	$table->injectData($data);
+	$table->display();	
+}
+
+function cli_echo_footer(string $finished='Finished.', bool $echo=true){
+    $out = PHP_EOL;
+    $out.= cli_echo($finished, ['fg' => 'green', 'style' => 'bold', 'echo' => false ]);
+    $out.= cli_echo(format_bytes(memory_get_peak_usage()), ['header' => 'Peak memory', 'fg' => 'light_gray', 'echo' => false ]);
+
+    if ( $echo )
+        echo $out;
+
+    return $out;
+}
+
+function cli_echo_made_with_love(string $where='', string $made_with='Made with ', string $emoji='♥', bool $echo=true){
+    $where = !empty($where) ? ' in ' . $where : $where;
+    
+    $out = PHP_EOL;
+    $out.= cli_echo_array(
+        // schema
+        array(
+            'love' => array(
+                'title' => 
+                    text_style($made_with, ['fg' => 'cyan', 'style' => 'bold']) .
+                    text_style($emoji, ['fg' => 'red', 'style' => 'bold']) . 
+                    text_style($where, ['fg' => 'cyan', 'style' => 'bold']),
+                'size' => ( mb_strlen($made_with)+mb_strlen($emoji)+mb_strlen($where) ),
+            )
+        ),
+
+        // data
+        false,
+
+        // args
+        array(
+            'header' => true,
+            'echo' => false,
+        )
+    );
+    $out.= PHP_EOL;
+
+    if ( $echo )
+        echo $out;
+
+    return $out;
+}
+
+/**
+ * Styles
+ */
+function text_style(string $txt, array $args){
+    if ( !is_cli() )
+        return $txt;
+
     $def = [
         'bg' => null,
         'fg' => null,
@@ -215,13 +285,11 @@ function cli_txt_style(string $txt, array $args){
             break;
 
         case 'error':
-            // $fg = 'white';
             $bg = 'red';
             break;
         
         case 'warning':
-            $fg = 'black';
-            $bg = 'yellow';
+            $bg = 'light_red';
             break;
     }
 
@@ -234,54 +302,53 @@ function cli_txt_style(string $txt, array $args){
 
     // color
     if ( $bg or $fg ){
-        $colors = new Wujunze\Colors();
+        $colors = new \Wujunze\Colors();
         $txt = $colors->getColoredString($txt, $fg, $bg);
     }
 
     return $txt;
 }
 
-function _cli_echo_padding(string $msg, array $args){
+function _echo_padding(string $msg, array $args){
     $out = null;
     $msg.= '  ';
     $text = '  ' . $args['header'] .': ' . $msg;
     $text_array = [
-        cli_txt_style(str_pad_unicode(' ', strlen($text)), $args),
-        cli_txt_style('  ' . _cli_echo_header($args['header']), $args+['style' => 'bold']).cli_txt_style($msg, $args),
-        cli_txt_style(str_pad_unicode(' ', strlen($text)), $args),
+        text_style(str_pad_unicode(' ', strlen($text)), $args),
+        text_style('  ' . _echo_header($args['header']), $args+['style' => 'bold']).text_style($msg, $args),
+        text_style(str_pad_unicode(' ', strlen($text)), $args),
     ];
     foreach ($text_array as $txt)
         $out.= '  ' . $txt . PHP_EOL;
     return PHP_EOL . $out;
 }
 
-function _cli_echo_header(string $header){
+function _echo_header(string $header){
     return strtoupper($header) . ': ';
 
 }
 
-function cli_get_arg($a, $alt=false){
+/**
+ * $_GET
+ */
+function get_arg(string $a, $alt=false){
 	if ( isset($_GET[$a]) ){
-		if ( (string)$_GET[$a] == '0' or strtolower($_GET[$a]) == 'false' )
-			return false;
+        switch ( strtolower((string) $_GET[$a]) ){
+            case '0':
+            case 'false':
+                return false;
+
+            case '1':
+            case 'true':
+                return true;
+        }            
 		return $_GET[$a];
 	}
 
 	return $alt;
 }
 
-function cli_rmdirr(string $path) {
-    foreach ( glob("{$path}/*" ) as $file) {
-        if ( is_dir($file) ) { 
-            rmdirr($file);
-        } else {
-            unlink($file);
-        }
-    }
-    rmdir($path);
-}
-
-function cli_parse_get(){
+function parse_get(): void{
 	global $args, $argv;
 
 	// browser check
@@ -295,27 +362,129 @@ function cli_parse_get(){
 	if ( !empty($args)){foreach($args as $param){if (strpos($param, '--') === 0){$paramString = substr($param, 2);if ( ! empty($paramString)){if (strpos($paramString, '=') !== false){list($key, $value) = explode('=', $paramString);$_GET[strtolower($key)] = $value;}else{$_GET[strtolower($paramString)] = null;}}}}}
 }
 
-function cli_php_setup(){
-	ini_set('memory_limit', '2048M');
-	ini_set('default_socket_timeout', '300');
+/**
+ * Conditions
+ */
+function is_cli(){
+    if ( php_sapi_name() == "cli" )
+        return true;
 
-    // php setup    
-    set_time_limit(0);
-
-    // TODO: Still testing?
-	gc_disable();
-
-    // locale
-    date_default_timezone_set('America/New_York');
-    setlocale(LC_MONETARY, 'en_US');
-    	
-	// debug
-	if ( cli_get_arg('debug') ){
-		error_reporting(E_ALL);
-		ini_set('display_errors', 1);
-	}
+    return false;
 }
 
+function is_dot_file($file=null){
+	return basename($file)[0] == '.';
+}
+
+/**
+ * Filesystem
+ */
+function sort_filesystem_iterator($files_path=null, $offset=0, $limit=-1){
+	// cleaning up inputs
+	if ( $offset === false )
+		$offset = 0;
+	if ( $limit === false )
+		$limit = -1;
+
+	// FilesystemIterator()
+	$files = new \FilesystemIterator($files_path, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS);
+
+	// sort
+	$files = iterator_to_array_key($files, 'key');
+	sort($files);
+
+	// add offset/limits
+	$files = new \LimitIterator(new \ArrayIterator($files), $offset, $limit);
+	$files = iterator_to_array_key($files, 'value');
+
+	// we're done
+	return $files;
+}
+
+/**
+ * Helpers
+ */
+// explodes on new line
+function explode_on_rn($str=null){
+	return explode(',', str_replace(array("\r\n", "\r", "\n"), ',', $str));
+}
+
+// converts bytes to KB, MB, GB, TB
+function format_bytes($bytes, $precision = 2) { 
+    $units = array('B', 'KB', 'MB', 'GB', 'TB'); 
+
+    $bytes = max($bytes, 0); 
+    $pow = floor(($bytes ? log($bytes) : 0) / log(1024)); 
+    $pow = min($pow, count($units) - 1); 
+
+    // Uncomment one of the following alternatives
+    // $bytes /= pow(1024, $pow);
+    $bytes /= (1 << (10 * $pow)); 
+
+    return round($bytes, $precision) . ' ' . $units[$pow]; 
+}
+
+// http://php.net/manual/en/function.next.php
+function has_next(array $_array) {
+	return next($_array) !== false ?: key($_array) !== null;
+}
+
+function iterator_to_array_key($iterator, $key_value='key'){
+	// cast to a plain array
+	$array = array();
+	foreach ($iterator as $key => $value){
+		switch ($key_value) {
+			case 'key':
+				$array[] = $key;
+				break;
+			
+			default:
+				$array[] = $value;
+				break;
+		}
+	}
+
+	return $array;
+}
+
+function lr_trim($string=null){
+	// trim both left + right of extra non-alpha characters
+	return ltrim(rtrim(trim($string), '$-_.+!*\'(),{}|\\^~[]`<>#%";/?:@&='), '$-_.+!*\'(),{}|\\^~[]`<>#%";/?:@&=');
+}
+
+// https://secure.php.net/manual/en/function.str-pad.php#111147
+function str_pad_unicode($str, $pad_len, $pad_str = ' ', $dir = STR_PAD_RIGHT) {
+    $str_len = mb_strlen($str);
+    $pad_str_len = mb_strlen($pad_str);
+    if (!$str_len && ($dir == STR_PAD_RIGHT || $dir == STR_PAD_LEFT)) {
+        $str_len = 1; // @debug
+    }
+    if (!$pad_len || !$pad_str_len || $pad_len <= $str_len) {
+        return $str;
+    }
+    
+    $result = null;
+    $repeat = ceil($str_len - $pad_str_len + $pad_len);
+    if ($dir == STR_PAD_RIGHT) {
+        $result = $str . str_repeat($pad_str, (int) round($repeat));
+        $result = mb_substr($result, 0, $pad_len);
+    } else if ($dir == STR_PAD_LEFT) {
+        $result = str_repeat($pad_str, $repeat) . $str;
+        $result = mb_substr($result, -$pad_len);
+    } else if ($dir == STR_PAD_BOTH) {
+        $length = ($pad_len - $str_len) / 2;
+        $repeat = ceil($length / $pad_str_len);
+        $result = mb_substr(str_repeat($pad_str, $repeat), 0, floor($length)) 
+                    . $str 
+                       . mb_substr(str_repeat($pad_str, $repeat), 0, ceil($length));
+    }
+    
+    return $result;
+}
+
+/**
+ * Progress
+ */
 /**
 	Copyright (c) 2010, dealnews.com, Inc.
 	All rights reserved.
@@ -363,7 +532,7 @@ function cli_php_setup(){
  * @return  void
  *
  */
-function cli_show_status($done, $total, $size=50, $brackets=true) {
+function progress_show_status($done, $total, $size=50, $brackets=true) {
     static $start_time;
     // original
     // $empty = ' ';
@@ -418,150 +587,7 @@ function cli_show_status($done, $total, $size=50, $brackets=true) {
         echo PHP_EOL;
 }
 
-function cli_show_status_close($done, $total){
+function progress_show_status_close($done, $total){
     if( $done != $total )
         echo PHP_EOL;
-}
-
-/**
- * Helpers
- */
-function _get($opt=null, $alt=false){
-    if ( isset($_GET[$opt]) )
-        return $_GET[$opt];
-
-    return $alt;
-}
-
-function _post($opt=null, $alt=false){
-    if ( isset($_POST[$opt]) )
-        return $_POST[$opt];
-
-    return $alt;
-}
-
-// explodes on new line
-function explode_on_rn($str=null){
-	return explode(',', str_replace(array("\r\n", "\r", "\n"), ',', $str));
-}
-
-// converts bytes to KB, MB, GB, TB
-function format_bytes($bytes, $precision = 2) { 
-    $units = array('B', 'KB', 'MB', 'GB', 'TB'); 
-
-    $bytes = max($bytes, 0); 
-    $pow = floor(($bytes ? log($bytes) : 0) / log(1024)); 
-    $pow = min($pow, count($units) - 1); 
-
-    // Uncomment one of the following alternatives
-    // $bytes /= pow(1024, $pow);
-    $bytes /= (1 << (10 * $pow)); 
-
-    return round($bytes, $precision) . ' ' . $units[$pow]; 
-}
-
-// http://php.net/manual/en/function.next.php
-function has_next(array $_array) {
-	return next($_array) !== false ?: key($_array) !== null;
-}
-
-function is_cli(){
-    if ( php_sapi_name() == "cli" )
-        return true;
-
-    return false;
-}
-
-function is_dot_file($file=null){
-	return basename($file)[0] == '.';
-}
-
-function iterator_to_array_key($iterator, $key_value='key'){
-	// cast to a plain array
-	$array = array();
-	foreach ($iterator as $key => $value){
-		switch ($key_value) {
-			case 'key':
-				$array[] = $key;
-				break;
-			
-			default:
-				$array[] = $value;
-				break;
-		}
-	}
-
-	return $array;
-}
-
-function lr_trim($string=null){
-	// trim both left + right of extra non-alpha characters
-	return ltrim(rtrim(trim($string), '$-_.+!*\'(),{}|\\^~[]`<>#%";/?:@&='), '$-_.+!*\'(),{}|\\^~[]`<>#%";/?:@&=');
-}
-
-// https://stackoverflow.com/questions/14773072/php-str-pad-unicode-issue#27194169
-function mb_str_pad($str, $pad_len, $pad_str = ' ', $dir = STR_PAD_RIGHT, $encoding = NULL){
-    $encoding = $encoding === NULL ? mb_internal_encoding() : $encoding;
-    $padBefore = $dir === STR_PAD_BOTH || $dir === STR_PAD_LEFT;
-    $padAfter = $dir === STR_PAD_BOTH || $dir === STR_PAD_RIGHT;
-    $pad_len -= mb_strlen($str, $encoding);
-    $targetLen = $padBefore && $padAfter ? $pad_len / 2 : $pad_len;
-    $strToRepeatLen = mb_strlen($pad_str, $encoding);
-    $repeatTimes = ceil($targetLen / $strToRepeatLen);
-    $repeatedString = str_repeat($pad_str, max(0, $repeatTimes)); // safe if used with valid utf-8 strings
-    $before = $padBefore ? mb_substr($repeatedString, 0, floor($targetLen), $encoding) : '';
-    $after = $padAfter ? mb_substr($repeatedString, 0, ceil($targetLen), $encoding) : '';
-    return $before . $str . $after;
-}
-
-// https://secure.php.net/manual/en/function.str-pad.php#111147
-function str_pad_unicode($str, $pad_len, $pad_str = ' ', $dir = STR_PAD_RIGHT) {
-    $str_len = mb_strlen($str);
-    $pad_str_len = mb_strlen($pad_str);
-    if (!$str_len && ($dir == STR_PAD_RIGHT || $dir == STR_PAD_LEFT)) {
-        $str_len = 1; // @debug
-    }
-    if (!$pad_len || !$pad_str_len || $pad_len <= $str_len) {
-        return $str;
-    }
-    
-    $result = null;
-    $repeat = ceil($str_len - $pad_str_len + $pad_len);
-    if ($dir == STR_PAD_RIGHT) {
-        $result = $str . str_repeat($pad_str, $repeat);
-        $result = mb_substr($result, 0, $pad_len);
-    } else if ($dir == STR_PAD_LEFT) {
-        $result = str_repeat($pad_str, $repeat) . $str;
-        $result = mb_substr($result, -$pad_len);
-    } else if ($dir == STR_PAD_BOTH) {
-        $length = ($pad_len - $str_len) / 2;
-        $repeat = ceil($length / $pad_str_len);
-        $result = mb_substr(str_repeat($pad_str, $repeat), 0, floor($length)) 
-                    . $str 
-                       . mb_substr(str_repeat($pad_str, $repeat), 0, ceil($length));
-    }
-    
-    return $result;
-}
-
-function sort_filesystem_iterator($files_path=null, $offset=0, $limit=-1){
-	// cleaning up inputs
-	if ( $offset === false )
-		$offset = 0;
-	if ( $limit === false )
-		$limit = -1;
-
-	// FilesystemIterator()
-	$files = new FilesystemIterator($files_path, FilesystemIterator::SKIP_DOTS | FilesystemIterator::UNIX_PATHS);
-
-	// sort
-	$files = iterator_to_array_key($files, 'key');
-	sort($files);
-
-	// add offset/limits
-	$files = new LimitIterator(new ArrayIterator($files), $offset, $limit);
-	$files = iterator_to_array_key($files, 'value');
-
-	// we're done
-	return $files;
 }
