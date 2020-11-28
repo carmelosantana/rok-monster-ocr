@@ -76,6 +76,6 @@ $GLOBALS['rok_config']['governor_more_info_kills'] = [
         ['T3', 't3', false, 'white'],
         ['T4', 't4', false, 'white'],
         ['T5', 't5', false, 'white'],
-        ['Dead', 'dead', false, 'red'],
+        ['Dead', 'dead', false, 'yellow'],
     ],
 ];
