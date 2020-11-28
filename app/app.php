@@ -9,35 +9,35 @@ use carmelosantana\CliTools as CliTools;
  * OCR
  */
 // primary ocr loop
-function ocr(array $args, array $profile=[]): array {
+function ocr(array $args): array {
 	// def
 	$def = array(
 		// what are we doing
-		'job' => null,						// profile
+		'job' => null,
+		'profile' => [],
 
 		// storage paths
-		'input_path' => null,				// media source(s)
-		'output_path' => null,				// csv
-		'tmp_path' => null,					// cropped images, video screen shots
+		'input_path' => null,	// media source(s)
+		'output_path' => null,	// csv
+		'tmp_path' => null,	// cropped images, video screen shots
 
 		// output
-		'output_csv' => (CliTools\is_cli() ? true : false),			// output csv file?
-		'output_user_words' => false,		// list of words generated from OCR data
+		'output_csv' => (CliTools\is_cli() ? true : false),	// output csv file? Yes by default if CLI
 
 		// image processing
-		'compare_to_sample' => true,		// enable?
-		'distortion' => 0,
-	
+		'compare_to_sample' => true,	// compare to profile image or ignore image differences and try to read data
+		'distortion' => 0,	// threshold of difference allowed between profile sample and input image float 0-1
+
 		// video processing
-		'video' => true,					// enable?
+		'video' => true,	// if video is found in input path do we process or skip
 
 		// TesseractOCR
-		'lang' => ROK_CLI_LANG,				// language model
-		'oem' => null,						// OCR Engine Mode
-		'psm' => null,						// Page Segmentation Method
-		'tessdata' => ROK_CLI_TESSDATA,		// path to tessdata
+		'lang' => ROK_CLI_LANG,	// languages to try and read
+		'oem' => null,	// OCR Engine Mode
+		'psm' => null,	// Page Segmentation Method
+		'tessdata' => ROK_CLI_TESSDATA,	// path to tessdata models, default to system if none provided
 
-		// do we enable debug output?
+		// echos additional data
 		'debug' => CliTools\get_arg('debug'),
 	);
 
@@ -75,7 +75,7 @@ function ocr(array $args, array $profile=[]): array {
 	}
 
 	// notify on no input path
-	ocr_setup_paths($input_path, $output_path, $tmp_path, $debug);
+	ocr_setup_paths($input_path, $tmp_path, $debug);
 
 	// process each image file
 	foreach (get_files_ocr($input_path, $tmp_path, $video) as $file) {
@@ -183,16 +183,12 @@ function ocr(array $args, array $profile=[]): array {
 		echo PHP_EOL;
 	}
 
-	// add user words
-	if ( $output_user_words )
-		output_user_words($data, $output_user_words, $output_path);
-
 	// table output
 	CliTools\cli_echo_table(($profile['table']??null), $data);
 
 	// csv
 	if ( $output_csv )
-		output_csv($data, $output_csv, $output_path);
+		output_csv( $data, $output_csv, $output_path , $input_path );
 
 	return $data;
 }
@@ -240,8 +236,8 @@ function ocr_setup_langs($langs=['eng']): array {
 	return array_merge($def, $output);	
 }
 
-// setup input + output paths
-function ocr_setup_paths($input_path, &$output_path, &$tmp_path, $debug): void {
+// setup input + tmp paths
+function ocr_setup_paths($input_path, &$tmp_path, $debug): void {
 	if ( !is_dir($input_path) and !is_file($input_path) ){
 		CliTools\cli_echo('--input_path', ['header' => 'error', 'function' => __FUNCTION__]);
 		return;
@@ -251,26 +247,32 @@ function ocr_setup_paths($input_path, &$output_path, &$tmp_path, $debug): void {
 	if ( is_file($input_path) )
 		$input_path = dirname($input_path);
 
-	if ( !$output_path ){
-		$output_path = $input_path . '/output';
-		@mkdir($output_path, 0775, true);
-
-		if ( !is_dir($output_path) )
-			CliTools\cli_echo('Creating $output_path ' . $output_path, ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
-	}
-
 	// temporary files
 	if ( !$tmp_path and $debug ){
 		$tmp_path = $input_path . '/tmp';
 		@mkdir($tmp_path, 0775, true);
 
-	} else {
+	} elseif ( !$tmp_path or !is_dir( $tmp_path) ) {
 		$tmp_path = sys_get_temp_dir();
 
 	}
 
 	if ( !is_dir($tmp_path) )
 		CliTools\cli_echo('Missing --tmp_path ' , ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
+}
+
+// setup output path
+function setup_output_path( &$output_path, $input_path=null ){
+	if ( !$input_path )
+		return false;
+
+	if ( !$output_path or !is_dir( $output_path ) ){
+		$output_path = $input_path . '/output';
+		@mkdir( $output_path, 0775, true );
+
+		if ( !is_dir( $output_path ) )
+			CliTools\cli_echo( 'Creating $output_path ' . $output_path, ['header' => 'error', 'function' => __FUNCTION__] );
+	}
 }
 
 /**
@@ -334,7 +336,10 @@ function video_find_scene_change(string $file, string $output_path): bool {
  *	User outputs
  */
 // make CSV
-function output_csv(array $data, $headers=[], string $output_path): bool {
+function output_csv(array $data, $headers=[], $output_path, string $input_path): bool {
+	if ( !setup_output_path( $output_path, $input_path ) ) 
+		return false;
+
 	$output_path.= '/' . time() . '.csv';
 
 	// we need at least 1 record
@@ -404,11 +409,11 @@ function output_user_words(array $data, $keys=[], string $output_path): bool {
 function get_files(string $path, int $limit=-1, int $offset=0): array {
 	// error checks
 	if ( !$path or !is_dir($path) )
-		cli_echo('DIR does not exist ' . $path, ['header' => 'error', 'function' => __FUNCTION__]);
+		CliTools\cli_echo('DIR does not exist ' . $path, ['header' => 'error', 'function' => __FUNCTION__]);
 
 	// files
 	$files = CliTools\sort_filesystem_iterator($path, $offset, $limit);
-	cli_echo('Files found: '. count($files));
+	CliTools\cli_echo('Files found: '. count($files));
 
 	return $files;
 }
@@ -447,7 +452,6 @@ function get_files_ocr(string $input_path, string $tmp_path=null, bool $video=tr
 					video_find_scene_change($file, $save_to);
 
 					// TODO: Remove tmp DIR
-
 					// add these video files to total files
 					$files_output+= get_files_ocr($save_to);
 				}
