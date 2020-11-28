@@ -379,23 +379,22 @@ function is_dot_file($file=null){
 /**
  * Filesystem
  */
-function sort_filesystem_iterator($files_path=null, $offset=0, $limit=-1){
-	// cleaning up inputs
-	if ( $offset === false )
-		$offset = 0;
-	if ( $limit === false )
-		$limit = -1;
-
+function sort_filesystem_iterator($files_path=null, int $offset=0, int $limit=-1, $sort=false){
 	// FilesystemIterator()
 	$files = new \FilesystemIterator($files_path, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS);
 
 	// sort
-	$files = iterator_to_array_key($files, 'key');
-	sort($files);
+    $files = iterator_to_array_key($files, 'key');
+    
+    if ( $sort )
+    	sort($files);
 
-	// add offset/limits
-	$files = new \LimitIterator(new \ArrayIterator($files), $offset, $limit);
-	$files = iterator_to_array_key($files, 'value');
+    // add offset/limits
+    if ( $limit > 0 ) {
+    	$files = new \LimitIterator(new \ArrayIterator($files), $offset, $limit);
+    	$files = iterator_to_array_key($files, 'value');
+    
+    }
 
 	// we're done
 	return $files;
