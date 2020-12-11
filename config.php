@@ -25,42 +25,42 @@ $GLOBALS['rok_config']['governor_more_info_kills'] = [
         'power' => [
             'callback' => __NAMESPACE__ . '\text_remove_non_numeric',
             'crop' => [ 837, 163, 205, 46 ],
-            'whitelist' => range(0, 9)
+            'allowlist' => range(0, 9)
         ],
         'kills' => [
             'callback' => __NAMESPACE__ . '\text_remove_non_numeric',
             'crop' => [ 1066, 224, 285, 41 ],
-            'whitelist' => range(0, 9)
+            'allowlist' => range(0, 9)
         ],
         't1' => [
             'callback' => __NAMESPACE__ . '\text_remove_non_numeric',
             'crop' => [ 1012, 332, 144, 44 ],
-            'whitelist' => range(0, 9)
+            'allowlist' => range(0, 9)
         ],
         't2' => [
             'callback' => __NAMESPACE__ . '\text_remove_non_numeric',
             'crop' => [ 1202, 332, 144, 44 ],
-            'whitelist' => range(0, 9)
+            'allowlist' => range(0, 9)
         ],
         't3' => [
             'callback' => __NAMESPACE__ . '\text_remove_non_numeric',
             'crop' => [ 1012, 384, 144, 44 ],
-            'whitelist' => range(0, 9)
+            'allowlist' => range(0, 9)
         ],
         't4' => [
             'callback' => __NAMESPACE__ . '\text_remove_non_numeric',
             'crop' => [ 1202, 384, 144, 44 ],
-            'whitelist' => range(0, 9)
+            'allowlist' => range(0, 9)
         ],
         't5' => [
             'callback' => __NAMESPACE__ . '\text_remove_non_numeric',
             'crop' => [ 1012, 436, 144, 44 ],
-            'whitelist' => range(0, 9)
+            'allowlist' => range(0, 9)
         ],
         'dead' => [
             'callback' => __NAMESPACE__ . '\text_remove_non_numeric',
             'crop' => [ 1208, 557, 244, 50 ],
-            'whitelist' => range(0, 9)
+            'allowlist' => range(0, 9)
         ]
     ],
     'autocrop' => true,

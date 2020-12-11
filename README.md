@@ -195,7 +195,7 @@ Here we define parameters for each job. These parameters are user customizable a
             'crop' => [472, 147, 407, 91],
         ],
         'power' => [
-            'whitelist' => range(0, 9),
+            'allowlist' => range(0, 9),
             'crop' => [980, 168, 216, 35],
             'callback' => 'text_remove_non_numeric',
         ],
@@ -221,6 +221,6 @@ Now we breakdown the config and explain each part.
 | `name` | Data point with ID of `name` |
 | `crop` | Crop points to segment `name` from the image. [x, y, image-crop-x, image-crop-y] |
 | `power` | Data point with ID of `power` |
-| `whitelist` | Character whitelist [tesseract-ocr-for-php](https://github.com/thiagoalessio/tesseract-ocr-for-php#whitelist) |
+| `allowlist` | Character whitelist [tesseract-ocr-for-php](https://github.com/thiagoalessio/tesseract-ocr-for-php#allowlist) |
 | `crop` | Crop points to segment `power` from the image. [x, y, image-crop-x, image-crop-y] |
 | `callback` | The callback function receives raw OCR data as it's only argument to further processing. This could be for any cleanup or additional data manipulation before next image is processed. Provide namespace if applicable. |

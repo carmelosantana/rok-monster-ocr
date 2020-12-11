@@ -144,7 +144,7 @@ function ocr(array $args): array {
 	
 				// provided by profile
 				->configFile(($profile['ocr_schema'][$key]['config']??null))
-				->whitelist(($profile['ocr_schema'][$key]['whitelist']??null))
+				->allowlist(($profile['ocr_schema'][$key]['allowlist']??null))
 
 				// TODO: Check language bug with $rus
 				// RoK Supported: English, Arabic, Chinese, French, German, Indonesian, Italian, Japanese, Kanuri, Korean, Malay, Portuguese, Russian, Simplified Chinese, Spanish, Thai, Traditional Chinese, Turkish, Vietnamese
