@@ -2,7 +2,7 @@
 # Installs rok-monster-cli + all dependancies.
 
 # Setup
-DEMO_VER="1.0.0"
+DEMO_VER="1.0.2"
 PHP="php7.4"
 ROK_MONSTER_CLI="https://github.com/carmelosantana/rok-monster-cli"
 ROK_MONSTER_SAMPLES="https://github.com/carmelosantana/rok-monster-samples"
@@ -29,12 +29,19 @@ echo "  - ffmpeg"
 echo "  - tesseract-ocr"
 echo
 
-# Continue?
-echo -n "Do you want to continue? (yes/no) "
-read answer
-if ! echo "$answer" | grep -iq "^y"; then
-    exit 0
+# Automated
+if echo "$1" | grep -iq "^y"; then
+	AUTOMATE=true
 fi
+
+# Continue?
+if [ "$AUTOMATE" != true ]; then
+    echo -n "Do you want to continue? (yes/no) "
+    read answer
+    if ! echo "$answer" | grep -iq "^y"; then
+        exit 0
+    fi
+fi 
 
 # Update system
 sudo apt update
@@ -64,8 +71,7 @@ php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
 ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
 
 # Validate checksum
-if [ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]
-then
+if [ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]; then
     >&2 echo 'ERROR: Invalid installer checksum'
     rm composer-setup.php
     exit 1
