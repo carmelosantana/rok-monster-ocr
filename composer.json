@@ -1,5 +1,14 @@
 {
+    "name": "carmelosantana/rok-monster-cli",
+    "description": "CLI tools for Rise of Kingdoms.",
+    "keywords": [
+      "Rise of Kingdoms",
+      "rok"
+    ],
+    "homepage": "https://github.com/carmelosantana/rok-monster-cli",
+    "license": "MIT",
     "require": {
+        "php": ">=7.4.0",
         "league/color-extractor": "0.3.*",
         "thiagoalessio/tesseract_ocr": "^2.6",
         "wujunze/php-cli-color": "dev-master",
