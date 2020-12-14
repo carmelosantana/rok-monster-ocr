@@ -5,6 +5,8 @@
 - [RoK Monster](#rok-monster)
 - [How it works](#how-it-works)
 - [Install](#install)
+  - [Automated](#automated)
+  - [Manual](#manual)
   - [Ubuntu](#ubuntu)
     - [Software](#software)
     - [Tessdata](#tessdata)
@@ -58,9 +60,29 @@ Here's a quick overview of what happens during application execution for job `go
 
 ## Install
 
+### Automated
+
+The simplest way to get up and running is with the following command:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/carmelosantana/rok-monster-cli/master/install.sh | bash -s y
+```
+
+---
+
+Alternatively you can clone the repository and review the script before installing.
+
+```bash
+git clone https://github.com/carmelosantana/rok-monster-cli/
+cd rok-monster-cli
+sudo bash install.sh
+```
+
+### Manual
 Requirements:
 
-- php 7.4 *(tested)*
+- php 7.4
+  - GD extension
 - [Composer](https://getcomposer.org/)
 - [ImageMagick](https://imagemagick.org/)
 - [Tesseract](https://github.com/tesseract-ocr/tesseract)
