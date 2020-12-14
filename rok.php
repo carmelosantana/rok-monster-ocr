@@ -6,7 +6,7 @@ use carmelosantana\CliTools as CliTools;
 require_once __DIR__ . '/vendor/autoload.php';
 
 // defines
-defined('ROK_CLI_VER') or define('ROK_CLI_VER', '0.2.1');
+defined('ROK_CLI_VER') or define('ROK_CLI_VER', '0.2.2');
 defined('ROK_CLI_PATH') or define('ROK_CLI_PATH', __DIR__);
 
 // user and packaged config
