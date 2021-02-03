@@ -1,6 +1,6 @@
 # Rise of Kingdoms CLI Tools
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Discord](https://img.shields.io/discord/768180228710465598)](https://discord.gg/drhxwVQ) [![License: MIT](https://img.shields.io/github/license/carmelosantana/rok-monster-cli)](https://opensource.org/licenses/MIT)
 
 - [RoK Monster](#rok-monster)
 - [How it works](#how-it-works)
@@ -19,7 +19,7 @@
   - [Start a job via php](#start-a-job-via-php)
 - [Config](#config)
   - [Profile](#profile)
-- [Credits](#credits)
+- [Community](#community)
 - [Funding](#funding)
 - [License](#license)
 
@@ -221,9 +221,11 @@ Now we breakdown the config and explain each part.
 | `crop` | Crop points to segment `power` from the image. [x, y, image-crop-x, image-crop-y] |
 | `callback` | The callback function receives raw OCR data as it's only argument. This could be for used for additional cleanup or data manipulation before the next image is processed. Provide namespace if applicable. |
 
-## Credits
+## Community
 
-I'd like to thank the following community members for their time and contributions.
+Have a question, an idea, or need help geting started? Checkout our [Discord](https://discord.gg/drhxwVQ)!
+
+Honorable mentions for [community](https://discord.gg/drhxwVQ) members who've donated time and resources to **rok-monster-cli** or [rokmonster.com](https://rokmonster.com).
 
 - BouchB
 - j7johnny
