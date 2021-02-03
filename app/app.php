@@ -187,7 +187,7 @@ function ocr(array $args): array {
 	CliTools\cli_echo_table(($profile['table']??null), $data);
 
 	// csv
-	if ( $output_csv )
+	if ( $output_csv and !empty($data) )
 		if ( !output_csv( $data, $output_path, $input_path ) )
 			CliTools\cli_echo('Issue creating CSV', ['header' => 'error', 'function' => __FUNCTION__]);
 
@@ -239,8 +239,8 @@ function ocr_setup_langs($langs=['eng']): array {
 
 // setup input + tmp paths
 function ocr_setup_paths($input_path, &$tmp_path, $debug): void {
-	if ( !is_dir($input_path) and !is_file($input_path) ){
-		CliTools\cli_echo('--input_path', ['header' => 'error', 'function' => __FUNCTION__]);
+	if ( !$input_path or ( !is_dir($input_path) and !is_file($input_path) ) ){
+		CliTools\cli_echo('Missing or invalid --input_path', ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
 		return;
 	}
 
@@ -255,7 +255,7 @@ function ocr_setup_paths($input_path, &$tmp_path, $debug): void {
 	if ( $tmp_path and !is_dir( $tmp_path) ) {
 		@mkdir($tmp_path, 0775, true);
 
-	} elseif ( !is_dir( $tmp_path) ) {
+	} elseif ( !$tmp_path or !is_dir( $tmp_path ) ) {
 		$tmp_path = sys_get_temp_dir();
 
 	}
