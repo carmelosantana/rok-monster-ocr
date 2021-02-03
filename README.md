@@ -7,22 +7,21 @@
 - [Install](#install)
   - [Automated](#automated)
   - [Manual](#manual)
-  - [Ubuntu](#ubuntu)
     - [Software](#software)
     - [Tessdata](#tessdata)
     - [rok-monster-cli](#rok-monster-cli)
 - [Jobs](#jobs)
   - [Governor More Info Kills](#governor-more-info-kills)
-    - [Input](#input)
-    - [Data](#data)
-    - [Output](#output)
 - [Usage](#usage)
-  - [Arguments](#arguments)
   - [Setup](#setup)
+  - [Arguments](#arguments)
   - [Start a job via CLI](#start-a-job-via-cli)
   - [Start a job via php](#start-a-job-via-php)
 - [Config](#config)
   - [Profile](#profile)
+- [Credits](#credits)
+- [Funding](#funding)
+- [License](#license)
 
 ---
 
@@ -40,23 +39,9 @@ Here's a quick overview of what happens during application execution for job `go
 
 1. Screenshots are captured from any source video representing the most "interesting" frames.
 2. We iterate through each frame and perform the following actions:
-   1. Screenshots are compared to sample images.
-   2. The image is cropped per instructions declared in the profile. Each segment represents a single data point we're trying to collect. This is an output confirming a match was found and we're trying to capture data. A callback function can be provided to further process this data point.
-
-    ```
-    268: 2020-10-08 12-37-37.mkv-98.png
-    Distortion: 0.115005
-    OCR: e59720dac6af183f86e73dd957881990-name.png
-    OCR: e59720dac6af183f86e73dd957881990-power.png
-    OCR: e59720dac6af183f86e73dd957881990-kills.png
-    OCR: e59720dac6af183f86e73dd957881990-t1.png
-    OCR: e59720dac6af183f86e73dd957881990-t2.png
-    OCR: e59720dac6af183f86e73dd957881990-t3.png
-    OCR: e59720dac6af183f86e73dd957881990-t4.png
-    OCR: e59720dac6af183f86e73dd957881990-t5.png
-    ```
-    
-3. Finally a table prints when running via CLI. CSV output can be enabled with `--output_csv`.
+   1. Screenshots are compared to a sample image.
+   2. If we have a match we crop the image per instructions declared in the profile. *Each segment represents a single data point we're trying to collect.*
+3. On completion a table prints when running via CLI.
 
 ## Install
 
@@ -68,9 +53,11 @@ The simplest way to get up and running is with the following command:
 curl -sSL https://raw.githubusercontent.com/carmelosantana/rok-monster-cli/master/install.sh | bash -s y
 ```
 
+This will install all necessary dependencies and start a small demo project.
+
 ---
 
-Alternatively you can clone the repository and review the script before installing.
+Alternatively you can clone the repository and review the install script before executing.
 
 ```bash
 git clone https://github.com/carmelosantana/rok-monster-cli/
@@ -79,28 +66,29 @@ sudo bash install.sh
 ```
 
 ### Manual
+
 Requirements:
 
-- php 7.4
+- [PHP](https://www.php.net/manual/en/install.php) 7.4
   - GD extension
 - [Composer](https://getcomposer.org/)
 - [ImageMagick](https://imagemagick.org/)
 - [Tesseract](https://github.com/tesseract-ocr/tesseract)
 - [FFmpeg](https://ffmpeg.org/)
 
-### Ubuntu
-
 #### Software
 
-This assumes you have PHP 7.4 installed and running with access to [Composer](https://getcomposer.org/).
+This assumes you have [PHP](https://www.php.net/manual/en/install.php) 7.4 installed and running with access to [Composer](https://getcomposer.org/).
 
 ```bash
 sudo apt install imagemagick ffmpeg tesseract-ocr
 ```
 
+*This does not represent the complete install instructions for all dependencies. Please review the [install script](https://github.com/carmelosantana/rok-monster-cli/blob/master/install.sh) for detailed installation instructions.*
+
 #### Tessdata
 
-Using [tessdata](https://github.com/tesseract-ocr/tessdata) or [tessdata_best](https://github.com/tesseract-ocr/tessdata_best) models from the [Tesseract](https://github.com/tesseract-ocr) repositories have produced better results. You can download select languages or clone the repository and set this path with  `--tessdata`.
+Using [tessdata](https://github.com/tesseract-ocr/tessdata) or [tessdata_best](https://github.com/tesseract-ocr/tessdata_best) models from the [Tesseract](https://github.com/tesseract-ocr) repositories have produced better results than the models provided by apt-get. You can download select languages or clone the repository and set this path with  `--tessdata`.
 
 Alternatively you can try to install via apt-get. Some issues may include:
 
@@ -134,30 +122,22 @@ Default jobs are defined in `config.php` while user defined jobs can be added to
 
 ![Governor Info](https://carmelosantana.com/wp-content/uploads/sites/8/2020/11/governor_more_info_kills.png)
 
-#### Input
+Capture video or screenshots of the governor(s) **More Info** screen located in their profile. Kills per troop type can also be captured by pressing **(?)** by total kills.
 
-Recording of the governor(s) **More Info** screen located in their profile. Kills per troop type can also be captured by pressing **(?)** by total kills.
-
-#### Data
-
-![Data capture](https://carmelosantana.com/wp-content/uploads/sites/8/2020/11/771ff7c3be3fdcfe06c6500f22b60edf-preview.png)
-
-- Name
-- Power
-- Total kills
-- Kills (per troop type)
-- Dead
-
-#### Output
-
-- Table via CLI
-- CSV
+| Data | OCR Areas |
+| --- | --- |
+| Name, Power, Total kills, Kills *(by troop type)*, Dead| ![Data capture](https://carmelosantana.com/wp-content/uploads/sites/8/2020/11/771ff7c3be3fdcfe06c6500f22b60edf-preview-e1612324629618.png) |
 
 ## Usage
 
+### Setup
+
+- Game resolution and capture of at least 1920x1080
+- Current job templates are designed for English and 16/9 resolution
+
 ### Arguments
 
-| Argument | Value | Default |Description |
+| Argument | Value | Default | Description |
 | --- | --- | --- | --- |
 | debug | `bool` | `1` | Prints raw OCR reading per image. Uses local `--tmp_path` and preserves cropped images.  |
 | job | `string` | *Required* | ID of job defined in `config.php` or `config.local.php` |
@@ -170,15 +150,9 @@ Recording of the governor(s) **More Info** screen located in their profile. Kill
 | compare_to_sample | `bool` | `1` | Enable compare to sample  |
 | distortion | `float` | `0` | Distortion metric measured by Imagick compare  |
 | output_csv | `bool` | `0` | Save a .csv file on job completion |
-| output_user_words | `bool` | `0` | Save a list words found during the job |
 | video | `bool` | `1` | Enable video processing |
 
 - *bool as `0\1` or `true\false`*
-
-### Setup
-
-- Game resolution and capture of at least 1920x1080
-- Current job templates are designed for English and 16/9 resolution
 
 ### Start a job via CLI
 
@@ -245,4 +219,24 @@ Now we breakdown the config and explain each part.
 | `power` | Data point with ID of `power` |
 | `allowlist` | Character whitelist [tesseract-ocr-for-php](https://github.com/thiagoalessio/tesseract-ocr-for-php#allowlist) |
 | `crop` | Crop points to segment `power` from the image. [x, y, image-crop-x, image-crop-y] |
-| `callback` | The callback function receives raw OCR data as it's only argument to further processing. This could be for any cleanup or additional data manipulation before next image is processed. Provide namespace if applicable. |
+| `callback` | The callback function receives raw OCR data as it's only argument. This could be for used for additional cleanup or data manipulation before the next image is processed. Provide namespace if applicable. |
+
+## Credits
+
+I'd like to thank the following community members for their time and contributions.
+
+- BouchB
+- j7johnny
+
+## Funding
+
+If you find **rok-monster-cli** useful you can help fund future development by making a contribution to one of our funding sources below.
+
+- [PayPal](https://www.paypal.com/donate?hosted_button_id=EKK8CQTPJG7WL)
+- Bitcoin *BTC*: bc1q4d5khf40n3ugujxkv4nrfxptdgny6gy9lrcsgk
+- Ethereum *ETH*: 0x94f838875f61be21b84e792f9e8c18e150295172
+- Tron *TRX*: TEGz64Di58EasMKyxMUatW6RymNQHmZWvS
+
+## License
+
+The code is licensed [MIT](https://opensource.org/licenses/MIT) and the documentation is licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).

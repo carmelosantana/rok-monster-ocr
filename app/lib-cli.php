@@ -481,6 +481,22 @@ function str_pad_unicode($str, $pad_len, $pad_str = ' ', $dir = STR_PAD_RIGHT) {
     return $result;
 }
 
+// https://www.php.net/manual/en/function.is-bool.php
+/**
+* Check "Booleanic" Conditions :)
+*
+* @param  [mixed]  $variable  Can be anything (string, bol, integer, etc.)
+* @return [boolean]           Returns TRUE  for "1", "true", "on" and "yes"
+*                             Returns FALSE for "0", "false", "off" and "no"
+*                             Returns NULL otherwise.
+*/
+function is_enabled($variable){
+    if ( !isset($variable) )
+        return null;
+        
+    return filter_var($variable, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+}
+
 /**
  * Progress
  */
