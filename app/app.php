@@ -22,7 +22,7 @@ function ocr(array $args): array {
 		'tmp_path' => null,	// cropped images, video screen shots
 
 		// output
-		'output_csv' => (CliTools\is_cli() ? true : false),	// output csv file? Yes by default if CLI
+		'output_csv' => false,
 
 		// image processing
 		'compare_to_sample' => true,	// compare to profile image or ignore image differences and try to read data
@@ -188,7 +188,8 @@ function ocr(array $args): array {
 
 	// csv
 	if ( $output_csv )
-		output_csv( $data, $output_csv, $output_path , $input_path );
+		if ( !output_csv( $data, $output_path, $input_path ) )
+			CliTools\cli_echo('Issue creating CSV', ['header' => 'error', 'function' => __FUNCTION__]);
 
 	return $data;
 }
@@ -248,11 +249,13 @@ function ocr_setup_paths($input_path, &$tmp_path, $debug): void {
 		$input_path = dirname($input_path);
 
 	// temporary files
-	if ( !$tmp_path and $debug ){
+	if ( !$tmp_path and $debug )
 		$tmp_path = $input_path . '/tmp';
+
+	if ( $tmp_path and !is_dir( $tmp_path) ) {
 		@mkdir($tmp_path, 0775, true);
 
-	} elseif ( !$tmp_path or !is_dir( $tmp_path) ) {
+	} elseif ( !is_dir( $tmp_path) ) {
 		$tmp_path = sys_get_temp_dir();
 
 	}
@@ -263,16 +266,16 @@ function ocr_setup_paths($input_path, &$tmp_path, $debug): void {
 
 // setup output path
 function setup_output_path( &$output_path, $input_path=null ){
-	if ( !$input_path )
-		return false;
-
-	if ( !$output_path or !is_dir( $output_path ) ){
+	if ( !$output_path and $input_path )
 		$output_path = $input_path . '/output';
+
+	if ( !is_dir( $output_path ) )
 		@mkdir( $output_path, 0775, true );
 
-		if ( !is_dir( $output_path ) )
-			CliTools\cli_echo( 'Creating $output_path ' . $output_path, ['header' => 'error', 'function' => __FUNCTION__] );
-	}
+	if ( !is_dir( $output_path ) )
+		CliTools\cli_echo( 'Creating $output_path ' . $output_path, ['header' => 'error', 'function' => __FUNCTION__] );
+
+	return true;
 }
 
 /**
@@ -336,33 +339,32 @@ function video_find_scene_change(string $file, string $output_path): bool {
  *	User outputs
  */
 // make CSV
-function output_csv(array $data, $headers=[], $output_path, string $input_path): bool {
+function output_csv(array $data, &$output_path, string $input_path): bool {
 	if ( !setup_output_path( $output_path, $input_path ) ) 
 		return false;
 
-	$output_path.= '/' . time() . '.csv';
+	$output_path_csv = $output_path . '/' . time() . '.csv';
 
 	// we need at least 1 record
 	if ( !isset($data[0]) )
 		return false;
 
-	// build headers if none are provided
-	if ( empty($headers) or !is_array($headers) )
-		$headers = array_keys($data[0]);
-	
+	// build headers
+	$headers = array_keys($data[0]);
+
 	// build csv
 	$csv = [];
 	foreach($data as $row) {
 		$tmp = [];
-		foreach ( array_values($headers) as $key )
+		foreach ( $headers as $key )
 			$tmp[] = $row[$key] ?? '';
 
 		$csv[] = $tmp;
 	}
 
 	// save to CSV
-	$fp = fopen($output_path, 'w');
-	fputcsv($fp, array_keys($headers));
+	$fp = fopen($output_path_csv, 'w');
+	fputcsv($fp, $headers);
 	foreach($csv as $row) {
 		fputcsv($fp, $row);
 	}
