@@ -235,9 +235,9 @@ Honorable mentions for [community](https://discord.gg/drhxwVQ) members who've do
 If you find **rok-monster-cli** useful you can help fund future development by making a contribution to one of our funding sources below.
 
 - [PayPal](https://www.paypal.com/donate?hosted_button_id=EKK8CQTPJG7WL)
-- Bitcoin *BTC*: bc1q4d5khf40n3ugujxkv4nrfxptdgny6gy9lrcsgk
-- Ethereum *ETH*: 0x94f838875f61be21b84e792f9e8c18e150295172
-- Tron *TRX*: TEGz64Di58EasMKyxMUatW6RymNQHmZWvS
+- Bitcoin `bc1qx7v5vvxwnhpl3dssggy0hytcx2rpq5dkkfwyy4`
+- Ethereum `0xA8Ebb6e5EC503E90551dD1bdE2d00B6C126eD5C5`
+- Tron `TPnGEfkUZ2py6CFkh8wgqqYehJ29EbMWVw`
 
 ## License
 
