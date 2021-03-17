@@ -29,7 +29,7 @@
 
 Command line tools to help automate collection of player statistics from [Rise of Kingdoms](https://rok.lilithgames.com/en). By analyzing recorded game play we can extract various data points such as governor power, deaths, kills and more. This can help with various kingdom statistics or fairly distributing [KvK](https://rok.guide/the-lost-kingdom-kvk/) rewards.
 
-![Sample](https://carmelosantana.com/wp-content/uploads/sites/8/2020/11/rok-monster-cli-v0.2.0.png)
+![Sample](https://carmelosantana.com/app/uploads/2020/11/rok-monster-cli-v0.2.0.png)
 
 *Results may vary.*
 
@@ -78,7 +78,7 @@ Requirements:
 
 #### Software
 
-This assumes you have [PHP](https://www.php.net/manual/en/install.php) 7.4 installed and running with access to [Composer](https://getcomposer.org/).
+This assumes you have [PHP](https://www.php.net/manual/en/install.php) installed and running with access to [Composer](https://getcomposer.org/).
 
 ```bash
 sudo apt install imagemagick ffmpeg tesseract-ocr
@@ -120,13 +120,13 @@ Default jobs are defined in `config.php` while user defined jobs can be added to
 
 `governor_more_info_kills`
 
-![Governor Info](https://carmelosantana.com/wp-content/uploads/sites/8/2020/11/governor_more_info_kills.png)
+![Governor Info](https://carmelosantana.com/app/uploads/2020/11/governor_more_info_kills.png)
 
 Capture video or screenshots of the governor(s) **More Info** screen located in their profile. Kills per troop type can also be captured by pressing **(?)** by total kills.
 
 | Data | OCR Areas |
 | --- | --- |
-| Name, Power, Total kills, Kills *(by troop type)*, Dead| ![Data capture](https://carmelosantana.com/wp-content/uploads/sites/8/2020/11/771ff7c3be3fdcfe06c6500f22b60edf-preview-e1612324629618.png) |
+| Name, Power, Total kills, Kills *(by troop type)*, Dead| ![Data capture](https://carmelosantana.com/app/uploads/2020/11/771ff7c3be3fdcfe06c6500f22b60edf-preview-e1612324629618.png) |
 
 ## Usage
 
