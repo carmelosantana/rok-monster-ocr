@@ -2,12 +2,12 @@
 # Installs rok-monster-cli + all dependancies.
 
 # Setup
-DEMO_VER="1.0.2"
-PHP="php7.4"
+DEMO_VER="1.0.3"
+PHP="php8.0"
 ROK_MONSTER_CLI="https://github.com/carmelosantana/rok-monster-cli"
 ROK_MONSTER_SAMPLES="https://github.com/carmelosantana/rok-monster-samples"
 TESSDATA="https://github.com/tesseract-ocr/tessdata"
-ROK_PHP="rok.php"
+CHECK_FILE="rok.php"
 
 # Welcome
 echo
@@ -20,7 +20,8 @@ echo
 echo "This will install rok-monster-cli + sample media in: $PWD"
 echo
 echo "Supported OS:"
-echo "  - Ubuntu 20.04 LTS"
+echo "  - Ubuntu 20.04.2 LTS"
+echo "  - Ubuntu 20.10"
 echo
 echo "The following packages will be installed:"
 echo "  - git"
@@ -56,7 +57,7 @@ echo | sudo add-apt-repository ppa:ondrej/php
 sudo apt -y install $PHP $PHP-cli $PHP-common $PHP-gd $PHP-mbstring $PHP-snmp $PHP-xml $PHP-zip php-imagick
 
 # Install rok-monster-cli + sample data
-if [ ! -f "$FILE" ]; then
+if [ ! -f "$CHECK_FILE" ]; then
     git clone $ROK_MONSTER_CLI
     cd rok-monster-cli
 fi
