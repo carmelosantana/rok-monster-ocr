@@ -10,9 +10,9 @@
     "require": {
         "php": ">=7.4.0",
         "league/color-extractor": "0.3.*",
-        "thiagoalessio/tesseract_ocr": "^2.6",
+        "thiagoalessio/tesseract_ocr": "^2",
         "wujunze/php-cli-color": "dev-master",
-        "php-ffmpeg/php-ffmpeg": "^0.13.0",
+        "php-ffmpeg/php-ffmpeg": "^0.17.0",
         "treinetic/imageartist": "^1.0",
         "jc21/clitable": "^1.2",
         "james-heinrich/getid3": "^1.9"
