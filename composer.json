@@ -2,8 +2,8 @@
     "name": "carmelosantana/rok-monster-cli",
     "description": "CLI tools for Rise of Kingdoms.",
     "keywords": [
-      "Rise of Kingdoms",
-      "rok"
+        "Rise of Kingdoms",
+        "rok"
     ],
     "homepage": "https://github.com/carmelosantana/rok-monster-cli",
     "license": "MIT",
@@ -15,6 +15,16 @@
         "php-ffmpeg/php-ffmpeg": "^0.17.0",
         "treinetic/imageartist": "^1.0",
         "jc21/clitable": "^1.2",
-        "james-heinrich/getid3": "^1.9"
+        "james-heinrich/getid3": "^1.9",
+        "symfony/process": "^5.2",
+        "wp-cli/php-cli-tools": "^0.11.12"
+    },
+    "require-dev": {
+        "clean/phpdoc-md": "^0.19.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "carmelosantana\\RoKMonster\\": "src/"
+        }
     }
 }
