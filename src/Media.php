@@ -6,12 +6,13 @@ namespace carmelosantana\RoKMonster;
 
 use carmelosantana\RoKMonster\AutoCrop;
 use carmelosantana\RoKMonster\TinyCLI;
+use jamesheinrich\getid3\getID3;
 use Treinetic\ImageArtist\lib\Image as ImageArtist;
 
 class Media
 {
 	// apply scale factor to crop points
-	public static function apply_scale_factor(array $crop, float $scale): array
+	public static function applyScale(array $crop, float $scale): array
 	{
 		$out = [];
 		foreach ($crop as $n)
@@ -23,12 +24,12 @@ class Media
 	// compare images
 	// https://stackoverflow.com/questions/37581147/percentage-of-pixels-that-have-changed-in-an-image-in-php#37594159
 	// https://stackoverflow.com/questions/4684023/how-to-check-if-an-integer-is-within-a-range-of-numbers-in-php
-	public static function compare_get_distortion(string $image_path_1, string $image_path_2, bool $resize = true)
+	public static function getCompareDistortion(string $image_path_1, string $image_path_2, bool $resize = true)
 	{
 		// check for errors
 		foreach ([$image_path_1, $image_path_2] as $image) {
 			if (!$image or !file_exists($image)) {
-				TinyCLI::cli_echo('File not found. ' . $image, ['header' => 'warning', 'function' => __FUNCTION__]);
+				TinyCLI::echo('File not found. ' . $image, ['header' => 'warning', 'function' => __FUNCTION__]);
 				return false;
 			}
 		}
@@ -66,17 +67,17 @@ class Media
 		return $output;
 	}
 
-	public static function get_mime_content_type(string $file)
+	public static function getMIMEContentType(string $file)
 	{
 		foreach (['image', 'video'] as $type)
-			if (self::is_mime_content_type($file, $type))
+			if (self::isMIMEContentType($file, $type))
 				return $type;
 
 		return false;
 	}
 
 	// get scale factor between 2 images
-	public static function get_scale_factor(string $img1, string $img2): float
+	public static function getScaleFactor(string $img1, string $img2): float
 	{
 		list($img1_width, $img1_height) = getimagesize($img1);
 		list($img2_width, $img2_height) = getimagesize($img2);
@@ -84,23 +85,7 @@ class Media
 		return round(($img1_height / $img2_height), 5);
 	}
 
-	public static function image_prep_ocr(string $file, string $output_path, array $profile): string
-	{
-		$def = [
-			'autocrop' => null,
-		];
-		$profile = array_merge($def, $profile);
-
-		if ($profile['autocrop']) {
-			$file_crop = $output_path . '/' . pathinfo($file)['basename'];
-			new AutoCrop($file, $file_crop);
-			return $file_crop;
-		}
-
-		return $file;
-	}
-
-	public static function is_mime_content_type(string $file, string $type = 'image'): bool
+	public static function isMIMEContentType(string $file, string $type = 'image'): bool
 	{
 		if (!is_file($file))
 			return false;
@@ -125,11 +110,70 @@ class Media
 		return $output;
 	}
 
-	// find interesting scenes
+	public static function ffmpeg_cmd(array $args): void {
+		$def = [
+			// task
+			'action' => null,
+	
+			// file
+			'input' => null,
+			'output_path' => null,
+	
+			// ffmpeg
+			'fps_multiplier' => 1.5,
+			'ss' => null,
+			'threshold' => '0.4',
+		];
+		
+		// args to vars
+		$args = array_merge($def, $args);
+		extract($args);
+	
+		// output file
+		$output_file = $output_path . '/' . pathinfo($input)['basename'];
+	
+		// frames
+		$getID3 = new \getID3;
+		$input_info = $getID3->analyze($input);
+		$frames = round(round($input_info['video']['frame_rate'])*round($fps_multiplier));
+	
+		// start command
+		$vf_scale = ' scale='.$input_info['video']['resolution_x'].':-1';
+		$output_file_d = '"' . $output_file.'-%d.png" ';
+	
+		$cmd = 'ffmpeg -i "'.$input.'" ';
+	
+		switch ($action) {		
+			// single frame
+			case 'single':
+				$cmd.= '-ss '.($ss ?? '00:00:01.00');
+			break;
+	
+			// https://video.stackexchange.com/questions/19725/extract-key-frame-from-video-with-ffmpeg
+			case 'interesting':
+				$cmd.= '-ss '.($ss ?? '50').' -vf "'.$vf_scale.', thumbnail='.$frames.'" -vsync 0 '.$output_file_d;
+			break;
+	
+			// https://stackoverflow.com/questions/35675529/using-ffmpeg-how-to-do-a-scene-change-detection-with-timecode
+			case 'scene_change':
+				$cmd.= ' -vf  "'.$vf_scale.', select=gt(scene\,'.$threshold.')" -vsync vfr ' . $output_file_d;
+			break;
+	
+			default:
+				// multiple frames
+				$cmd.= '-y';
+			break;
+		}
+	
+		// command
+		TinyCLI::cli_debug_echo($cmd, ['header' => 'FFmpeg']);	
+		$output = exec($cmd);
+	}
+
 	public static function video_find_scene_change(string $file, string $output_path): bool
 	{
 		// skip non video formats
-		if (!Media::is_mime_content_type($file, 'video'))
+		if (!Media::isMIMEContentType($file, 'video'))
 			return false;
 
 		self::ffmpeg_cmd([
