@@ -17,6 +17,11 @@
                 "carmelosantana\\RoKMonster\\Transformer",
                 "strRemoveNonNumeric"
             ],
+            "lang": [
+                "eng"
+            ],
+            "oem": 1,
+            "psm": 7,
             "crop": [
                 837,
                 163,
@@ -41,6 +46,11 @@
                 "carmelosantana\\RoKMonster\\Transformer",
                 "strRemoveNonNumeric"
             ],
+            "lang": [
+                "eng"
+            ],
+            "oem": 1,
+            "psm": 7,
             "crop": [
                 1066,
                 224,
@@ -71,6 +81,11 @@
                 144,
                 44
             ],
+            "lang": [
+                "eng"
+            ],
+            "oem": 1,
+            "psm": 7,            
             "allowlist": [
                 0,
                 1,
@@ -95,6 +110,11 @@
                 144,
                 44
             ],
+            "lang": [
+                "eng"
+            ],
+            "oem": 1,
+            "psm": 7,            
             "allowlist": [
                 0,
                 1,
@@ -119,6 +139,11 @@
                 144,
                 44
             ],
+            "lang": [
+                "eng"
+            ],
+            "oem": 1,
+            "psm": 7,            
             "allowlist": [
                 0,
                 1,
@@ -143,6 +168,11 @@
                 144,
                 44
             ],
+            "lang": [
+                "eng"
+            ],
+            "oem": 1,
+            "psm": 7,            
             "allowlist": [
                 0,
                 1,
@@ -161,6 +191,11 @@
                 "carmelosantana\\RoKMonster\\Transformer",
                 "strRemoveNonNumeric"
             ],
+            "lang": [
+                "eng"
+            ],
+            "oem": 1,
+            "psm": 7,            
             "crop": [
                 1012,
                 436,
@@ -191,6 +226,11 @@
                 244,
                 50
             ],
+            "lang": [
+                "eng"
+            ],
+            "oem": 1,
+            "config_file": "digits",            
             "allowlist": [
                 0,
                 1,
