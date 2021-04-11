@@ -8,6 +8,7 @@ use DirectoryIterator;
 
 class Templates
 {
+    const AUTHOR = 'AUTHOR';
     const TITLE = 'TITLE';
     
     public array $allowed_image_types = [
@@ -31,10 +32,10 @@ class Templates
         return $this;
     }
 
-    public function get($template = null)
+    public function get($template = null, $alt=false)
     {
         if ($template)
-            return $this->templates[$template] ?? false;
+            return $this->templates[$template] ?? $alt;
 
         return $this->templates;
     }
