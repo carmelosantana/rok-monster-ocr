@@ -14,7 +14,7 @@ class TinyCLI
     /**
      * Output
      */
-    public static function cli_echo($msg = null, $args = [])
+    public static function echo($msg = null, $args = [])
     {
         $def = array(
             // progress
@@ -56,7 +56,7 @@ class TinyCLI
         if ($header) {
             switch ($header) {
                 case 'error':
-                    if ($function)
+                    if (is_string($function))
                         $msg = $function . ' ' . $msg;
                     break;
             }
@@ -91,7 +91,7 @@ class TinyCLI
 
         // echo if not suppressed
         if ($echo)
-            echo $out;
+            fwrite(STDOUT, $out);
 
         // https://stackoverflow.com/questions/6543841/php-cli-getting-input-from-user-and-then-dumping-into-variable-possible#6543936
         if ($stdin) {
@@ -110,7 +110,7 @@ class TinyCLI
 
     public static function cli_debug_echo($msg = null, $args = [])
     {
-        self::cli_echo($msg, array_merge(['header' => 'debug'], $args));
+        self::echo($msg, array_merge(['header' => 'debug'], $args));
     }
 
     public static function cli_echo_array($schema = null, $data = null, $args = [])
@@ -186,7 +186,7 @@ class TinyCLI
 
     public static function cli_echo_table($schema = null, $data = null)
     {
-        if (!$schema or !self::is_cli())
+        if (!$schema or !self::isCLI())
             return false;
 
         $table = new CliTable;
@@ -201,8 +201,8 @@ class TinyCLI
     public static function cli_echo_footer(string $finished = 'Finished.', bool $echo = true)
     {
         $out = PHP_EOL;
-        $out .= self::cli_echo($finished, ['fg' => 'green', 'style' => 'bold', 'echo' => false]);
-        $out .= self::cli_echo(self::format_bytes(memory_get_peak_usage()), ['header' => 'Peak memory', 'fg' => 'light_gray', 'echo' => false]);
+        $out .= self::echo($finished, ['fg' => 'green', 'style' => 'bold', 'echo' => false]);
+        $out .= self::echo(self::format_bytes(memory_get_peak_usage()), ['header' => 'Peak memory', 'fg' => 'light_gray', 'echo' => false]);
 
         if ($echo)
             echo $out;
@@ -249,7 +249,7 @@ class TinyCLI
      */
     public static function text_style(string $txt, array $args)
     {
-        if (!self::is_cli())
+        if (!self::isCLI())
             return $txt;
 
         $def = [
@@ -309,7 +309,7 @@ class TinyCLI
 
         // color
         if ($bg or $fg) {
-            $colors = new \Wujunze\Colors();
+            $colors = new Colors();
             $txt = $colors->getColoredString($txt, $fg, $bg);
         }
 
@@ -357,7 +357,7 @@ class TinyCLI
         return $alt;
     }
 
-    public static function parse_get(): void
+    public static function arguments(): void
     {
         global $args, $argv;
 
@@ -387,9 +387,31 @@ class TinyCLI
     }
 
     /**
+     * https://developer.wordpress.org/reference/functions/wp_parseArgs/
+     *
+     * @param array $args
+     * @return void
+     */
+    public static function parseArgs($args = [], $defaults = [])
+    {
+        if (is_object($args)) {
+            $parsed_args = get_object_vars($args);
+        } elseif (is_array($args)) {
+            $parsed_args = &$args;
+        } else {
+            parse_str($args, $parsed_args);
+        }
+
+        if (is_array($defaults) && $defaults) {
+            return array_merge($defaults, $parsed_args);
+        }
+        return $parsed_args;
+    }
+
+    /**
      * Conditions
      */
-    public static function is_cli()
+    public static function isCLI()
     {
         if (php_sapi_name() == "cli")
             return true;
@@ -400,30 +422,6 @@ class TinyCLI
     public static function is_dot_file($file = null)
     {
         return basename($file)[0] == '.';
-    }
-
-    /**
-     * Filesystem
-     */
-    public static function sort_filesystem_iterator($files_path = null, int $offset = 0, int $limit = -1, $sort = false)
-    {
-        // FilesystemIterator()
-        $files = new \FilesystemIterator($files_path, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS);
-
-        // sort
-        $files = self::iterator_to_array_key($files, 'key');
-
-        if ($sort)
-            sort($files);
-
-        // add offset/limits
-        if ($limit > 0) {
-            $files = new \LimitIterator(new \ArrayIterator($files), $offset, $limit);
-            $files = self::iterator_to_array_key($files, 'value');
-        }
-
-        // we're done
-        return $files;
     }
 
     /**
@@ -455,25 +453,6 @@ class TinyCLI
     public static function has_next(array $_array)
     {
         return next($_array) !== false ?: key($_array) !== null;
-    }
-
-    public static function iterator_to_array_key($iterator, $key_value = 'key')
-    {
-        // cast to a plain array
-        $array = array();
-        foreach ($iterator as $key => $value) {
-            switch ($key_value) {
-                case 'key':
-                    $array[] = $key;
-                    break;
-
-                default:
-                    $array[] = $value;
-                    break;
-            }
-        }
-
-        return $array;
     }
 
     public static function lr_trim($string = null)
