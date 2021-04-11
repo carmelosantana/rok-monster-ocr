@@ -4,185 +4,98 @@ declare(strict_types=1);
 
 namespace carmelosantana\RoKMonster;
 
+use carmelosantana\RoKMonster\AutoCrop;
 use carmelosantana\RoKMonster\Media;
 use carmelosantana\RoKMonster\TinyCLI;
+use carmelosantana\RoKMonster\Templates;
 use carmelosantana\RoKMonster\Transformer;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
-class RokMonster
+class RoKMonster
 {
-	private $version = '0.3.0';
+	public array $data;
+
+	private array $args;
+	private array $template;
+	private object $templates;
+
+	const VERSION = '0.3.0';
 
 	public function __construct(array $args = [])
 	{
+		$default = [];
 
-		self::load_config();
+		if (TinyCLI::isCLI()) {
+			// set $_GET
+			TinyCLI::arguments();
 
-		if (TinyCLI::is_cli()) {
-			// TODO: Still testing?
-			gc_disable();
-
-			// get args
-			TinyCLI::parse_get();
-
-			// debug
-			if (TinyCLI::get_arg('debug')) {
-				ini_set('display_errors', '1');
-				ini_set('display_startup_errors', '1');
-				error_reporting(E_ALL);
-			}
+			// merge $_GET options with options passed from _construct
+			$args = TinyCLI::parseArgs($_GET, $args);
 		}
 
-		// welcome
-		self::logo();
-
-		// add CLI args
-		if (empty($args))
-			$args = array_merge($args, $_GET);
-
-		// exec
-		$this->ocr($args);
-
-		// goodbye
-		TinyCLI::cli_echo_footer();
-		TinyCLI::cli_echo_made_with_love('NY');
+		// merge requested args with default
+		$this->args = TinyCLI::parseArgs($args, $default);
 	}
 
-	public static function load_config(string $config = null)
+	public function ocr()
 	{
-		// user and packaged config
-		$GLOBALS['rok_config'] = [];
-
-		$dir = dirname(dirname(__FILE__));
-
-		$files = [
-			'config.local.php',
-			'config.php',
-		];
-
-		foreach ($files as $file) {
-			$path = $dir . DIRECTORY_SEPARATOR . $file;
-			file_exists($path) and require_once $path;
-		}
-	}
-
-	// primary ocr loop
-	public function ocr(array $args): array
-	{
-		// def
-		$def = array(
-			// what are we doing
-			'job' => null,
-			'profile' => [],
-
-			// storage paths
-			'input_path' => null,	// media source(s)
-			'output_path' => null,	// csv
-			'tmp_path' => null,	// cropped images, video screen shots
-
-			// output
-			'output_csv' => false,
-
-			// image processing
-			'compare_to_sample' => true,	// compare to profile image or ignore image differences and try to read data
-			'distortion' => 0,	// threshold of difference allowed between profile sample and input image float 0-1
-
-			// video processing
-			'video' => true,	// if video is found in input path do we process or skip
-
-			// TesseractOCR
-			'lang' => ROK_CLI_LANG,	// languages to try and read
-			'oem' => null,	// OCR Engine Mode
-			'psm' => null,	// Page Segmentation Method
-			'tessdata' => ROK_CLI_TESSDATA,	// path to tessdata models, default to system if none provided
-
-			// echos additional data
-			'debug' => TinyCLI::get_arg('debug'),
-		);
-
-		// args to vars
-		extract(array_merge($def, $args));
-
 		// extract langs
-		extract(self::setup_languages($lang));
-
-		// cleanup vars
-		$debug = filter_var($debug, FILTER_VALIDATE_BOOLEAN);
-		$video = filter_var($video, FILTER_VALIDATE_BOOLEAN);
+		extract(self::setupLanguages());
 
 		// start vars
 		$data = [];
 		$count = 0;
 
-		// always check if job is provided, if not config lookup will fail
-		if (!$job) {
-			TinyCLI::cli_echo('Missing --job', ['header' => 'error', 'function' => __FUNCTION__]);
-			return $data;
-		}
-
-		// log any starting notes
-		TinyCLI::cli_echo('Starting ' . $job, ['format' => 'bold']);
-
-		// check for profile
-		if (empty($profile)) {
-			$profile = $GLOBALS['rok_config'][$job] ?? false;
-
-			if (!$profile) {
-				TinyCLI::cli_echo('Missing --job $profile', ['header' => 'error', 'function' => __FUNCTION__]);
-				return $data;
+		// is template loaded or are we searching all?
+		if ($this->env('job')) {
+			if ($this->template = $this->templates->get($this->env('job'))) {
+				TinyCLI::echo('Loaded ' . $this->template[$this->templates::TITLE], ['format' => 'bold']);
+			} else {
+				TinyCLI::echo('No template found.', ['format' => 'bold', 'header' => 'error', 'exit' => true]);
 			}
+		} else {
+			TinyCLI::echo('Searching available templates.', ['format' => 'bold']);
 		}
-
-		// notify on no input path
-		$this->setup_paths($input_path, $tmp_path, $debug);
 
 		// process each image file
-		foreach ($this->get_files_ocr($input_path, $tmp_path, $video) as $file) {
+		foreach ($this->getMediaFiles() as $file) {
 			// should only be an image
-			if (!Media::is_mime_content_type($file, 'image')) continue;
+			if (!Media::isMIMEContentType($file, 'image')) continue;
 
 			// persistent
 			$count++;
-			TinyCLI::cli_echo(basename($file), ['header' => (string) $count, 'fg' => 'green']);
+			TinyCLI::echo(basename($file), ['header' => (string) $count, 'fg' => 'green']);
 
 			// start/reset data for entry
 			$tmp = [];
-			if ($debug)
-				$tmp = ['_image' => basename($file)];
 
 			// prep image
-			$file = Media::image_prep_ocr($file, $tmp_path, $profile);
+			$file = $this->imagePrepare($file);
 
 			// match image to sample retrieve templates
-			if ($compare_to_sample) {
-				$image_distortion = Media::compare_get_distortion($profile['sample'], $file, true);
-				TinyCLI::cli_echo('Distortion: ' . $image_distortion);
+			if ($this->template('compare_to_sample')) {
+				$image_distortion = Media::getCompareDistortion($this->template('sample'), $file, true);
+				TinyCLI::echo('Distortion: ' . $image_distortion);
 
 				if (!$image_distortion) {
-					TinyCLI::cli_echo('Skip, missing image' . PHP_EOL);
+					TinyCLI::echo('Skip, missing image' . PHP_EOL);
 					continue;
 				}
 
 				if ($image_distortion > (float) ($distortion > 0 ? $distortion : $profile['distortion'])) {
-					TinyCLI::cli_echo('Skip' . PHP_EOL);
-
-					// TODO: Only remove file that doesn't meet compare threshold if from video
-					// delete_file($file, $debug);
+					TinyCLI::echo('Skip' . PHP_EOL);
 
 					// skip to next
 					continue;
 				}
-
-				if ($debug)
-					$tmp = ['_image_distortion' => $image_distortion];
 			}
 
 			// determine image scale factor for crop points
-			$scale_factor = Media::get_scale_factor($file, $profile['sample']);
+			$scale_factor = Media::getScaleFactor($file, $this->template('sample'));
 
 			// slice image for parts
 			$images = [];
-			foreach ($profile['ocr_schema'] as $key => $schema) {
+			foreach ($this->template['ocr_schema'] as $key => $schema) {
 				// init for further use
 				$tmp[$key] = null;
 
@@ -191,10 +104,10 @@ class RokMonster
 					continue;
 
 				// crop image location
-				$images[$key] = $tmp_path . '/' . md5($file) . '-' . $key . '.' . pathinfo($file)['extension'];
+				$images[$key] = $this->env('tmp_path') . '/' . md5($file) . '-' . $key . '.' . pathinfo($file)['extension'];
 
 				// adjust crop scale
-				$crop = Media::apply_scale_factor($schema['crop'], $scale_factor);
+				$crop = Media::applyScale($schema['crop'], $scale_factor);
 
 				// crop
 				Media::crop($file, $images[$key], $crop);
@@ -204,11 +117,11 @@ class RokMonster
 			foreach ($images as $key => $image) {
 				// ocr
 				$ocr = (new TesseractOCR($image))
-					->tessdataDir($tessdata)
+					->tessdataDir($this->env('tessdata', null))
 
 					// provided by profile
-					->configFile(($profile['ocr_schema'][$key]['config'] ?? null))
-					->allowlist(($profile['ocr_schema'][$key]['allowlist'] ?? null))
+					->configFile(($this->template('ocr_schema')[$key]['config'] ?? null))
+					->allowlist(($this->template('ocr_schema')[$key]['allowlist'] ?? null))
 
 					// TODO: Check language bug with $rus
 					// RoK Supported: English, Arabic, Chinese, French, German, Indonesian, Italian, Japanese, Kanuri, Korean, Malay, Portuguese, Russian, Simplified Chinese, Spanish, Thai, Traditional Chinese, Turkish, Vietnamese
@@ -219,26 +132,23 @@ class RokMonster
 					// ->userPatterns($user_patterns)
 
 					// settings:
-					->oem((int) ($oem ?? $profile['oem']))
-					->psm((int) ($psm ?? $profile['psm']))
+					->oem((int) $this->template('oem'))
+					->psm((int) $this->template('psm'))
 
 					// Reading Rainbow!
 					->run();
 
-				TinyCLI::cli_echo(basename($image), ['header' => 'OCR', 'fg' => 'light_gray']);
-				$tmp[$key] = Transformer::str_remove_extra_lines($ocr);
+				TinyCLI::echo(basename($image), ['header' => 'OCR', 'fg' => 'light_gray']);
+				$tmp[$key] = Transformer::strRemoveExtraLineBreaks($ocr);
 
-				if (isset($profile['ocr_schema'][$key]['callback']))
-					self::apply_callback($profile['ocr_schema'][$key]['callback'], $tmp[$key]);
+				if (isset($this->template('ocr_schema')[$key]['callback']))
+					self::apply_callback($this->template('ocr_schema')[$key]['callback'], $tmp[$key]);
 
 				TinyCLI::cli_debug_echo($tmp[$key]);
 
 				// remove ocr snippet
-				self::delete_file($image, $debug);
+				$this->deleteFile($image);
 			}
-
-			// TODO: Only remove file that matched sample if from video
-			// delete_file($file, $debug);
 
 			// add entry to others
 			$data[] = $tmp;
@@ -247,27 +157,107 @@ class RokMonster
 			echo PHP_EOL;
 		}
 
-		// table output
-		TinyCLI::cli_echo_table(($profile['table'] ?? null), $data);
-
-		// csv
-		if ($output_csv and !empty($data))
-			if (!self::output_csv($data, $output_path, $input_path))
-				TinyCLI::cli_echo('Issue creating CSV', ['header' => 'error', 'function' => __FUNCTION__]);
-
-		return $data;
+		$this->data = $data;
 	}
 
-	// get files to consider for OCR
-	public function get_files_ocr(string $input_path, string $tmp_path = null, bool $video = true): array
+	public function ocrDisplay()
+	{
+		if (!empty($this->data)) {
+			TinyCLI::cli_echo_table(($header ?? null), $this->data);
+		}
+	}
+
+	public function ocrExport()
+	{
+		if (!$this->env('export'))
+			return;
+
+		$export = explode(',', strtolower($this->env('export')));
+
+		// csv
+		if (in_array('csv', $export) and !empty($this->data))
+			$this->exportCSV();
+	}
+
+	public function run(): void
+	{
+		$this->logo();
+
+		$this->initEnv();
+
+		$this->initDebug();
+
+		$this->initMediaLibrary();
+
+		$this->initTemplates();
+
+		$this->debugEnv();
+
+		$this->ocr();
+
+		$this->ocrDisplay();
+
+		$this->ocrExport();
+
+		$this->shutdown();
+	}
+
+	public function set(string $key, string $value)
+	{
+		$this->args[$key] = $value;
+	}
+
+	private function env($name, $alt = false)
+	{
+		return $this->args[$name] ?? $_ENV[strtoupper($name)] ?? $alt;
+	}
+
+	private function envEnabled($name, $alt = false)
+	{
+		return TinyCLI::is_enabled($this->env($name, $alt));
+	}
+
+	private function debugEnv()
+	{
+		if (!$this->isDebug())
+			return;
+
+		$headers = ['Debug', 'Value'];
+
+		$data = [];
+
+		foreach (array_merge($this->args, $_ENV) as $key => $value) {
+			if (is_array($value)) {
+				$value = count($value) . 'x';
+			} elseif (is_bool($value)) {
+				$value = $value ? 'true' : 'false';
+			}
+			$data[] = [$key, $value];
+		}
+
+		$data[] = ['Loaded templates', (empty($this->templates) ? 'None' : count($this->templates->get()))];
+
+		$table = new \cli\Table();
+		$table->setHeaders($headers);
+		$table->setRows($data);
+		$table->display();
+	}
+
+	private function deleteFile(string $file): void
+	{
+		if (!$this->isDebug())
+			unlink($file);
+	}
+
+	private function getMediaFiles($path = null): array
 	{
 		// setup files
-		if (is_file($input_path)) {
-			$files = [$input_path];
+		if (is_file($this->env('input_path', ''))) {
+			$files = [$this->env('input_path')];
 
 			// setup path to search for files
-		} elseif (is_dir($input_path)) {
-			$files = TinyCLI::sort_filesystem_iterator($input_path);
+		} elseif (is_dir($this->env('input_path', ''))) {
+			$files = new \FilesystemIterator($this->env('input_path'), \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS);
 
 			// not sure what we have
 		} else {
@@ -276,24 +266,26 @@ class RokMonster
 
 		// go through DIR
 		$files_output = [];
-		foreach ($files as $file) {
-			switch (Media::get_mime_content_type($file)) {
-					// add all images
+		foreach ($files as $fi) {
+			if (!is_string($fi))
+				$file = $fi->getPathname();
+
+			switch (Media::getMIMEContentType($file)) {
 				case 'image':
+					// add all images
 					$files_output[] = $file;
 					break;
 
-					// add exported images from video
 				case 'video':
-					echo 1;
-					if ($video) {
-						$save_to = $tmp_path . '/' . pathinfo($file)['filename'];
+					// add exported images from video
+					if ($this->env('video')) {
+						$save_to = $this->env('tmp') . '/' . pathinfo($file)['filename'];
 						@mkdir($save_to, 0775, true);
 						Media::video_find_scene_change($file, $save_to);
 
 						// TODO: Remove tmp DIR
 						// add these video files to total files
-						$files_output += get_files_ocr($save_to);
+						$files_output += $this->getMediaFiles($save_to);
 					}
 					break;
 			}
@@ -302,29 +294,111 @@ class RokMonster
 		return $files_output;
 	}
 
-	public function setup_paths($input_path, &$tmp_path, $debug): void
+	private function imagePrepare(string $file): string
 	{
-		if (!$input_path or (!is_dir($input_path) and !is_file($input_path))) {
-			TinyCLI::cli_echo('Missing or invalid --input_path', ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
+		if ($this->template('autocrop')) {
+			$file_crop = $this->env('output_path') . DIRECTORY_SEPARATOR . pathinfo($file, PATHINFO_BASENAME);
+			var_dump($file_crop);
+			new AutoCrop($file, $file_crop);
+			return $file_crop;
+		}
+
+		return $file;
+	}
+
+	private function initDebug()
+	{
+		if (!$this->isDebug())
 			return;
+
+		ini_set('display_errors', '1');
+		ini_set('display_startup_errors', '1');
+		error_reporting(E_ALL);
+	}
+
+	private function initEnv()
+	{
+		$env = dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env';
+
+		// setup env if known exists
+		if (!is_file($env)) {
+			$sample = $env . '.example';
+			copy($sample, $env);
 		}
 
-		// get residing folder if file, we'll add other files there
-		if (is_file($input_path))
-			$input_path = dirname($input_path);
+		$dotenv = \Dotenv\Dotenv::createImmutable(dirname(__DIR__));
+		$dotenv->safeLoad();
+	}
 
-		// temporary files
-		if (!$tmp_path and $debug)
-			$tmp_path = $input_path . '/tmp';
-
-		if ($tmp_path and !is_dir($tmp_path)) {
-			@mkdir($tmp_path, 0775, true);
-		} elseif (!$tmp_path or !is_dir($tmp_path)) {
-			$tmp_path = sys_get_temp_dir();
+	private function initTemplates()
+	{
+		if (!$this->env('templates')) {
+			$path = '';
+		} else {
+			$path = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $this->env('templates', '');
 		}
 
-		if (!is_dir($tmp_path))
-			TinyCLI::cli_echo('Missing --tmp_path ', ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
+		$this->args['template_path'] = $path;
+
+		$this->templates = new Templates($path);
+	}
+
+	private function isDebug()
+	{
+		if ($this->envEnabled('debug'))
+			return true;
+
+		return false;
+	}
+
+	private function initMediaLibrary(): void
+	{
+		$paths = [
+			'input_path',
+			'output_path',
+			'tmp_path'
+		];
+
+		foreach ( $paths as $path ){
+			if (file_exists($this->env($path, '')))
+				continue;
+
+			if (!is_dir($this->env($path)) and $this->env($path))
+				@mkdir($this->env($path, ''), 0775, true);
+
+			if (!is_dir($this->env($path, '')))
+				TinyCLI::echo('Missing or invalid --' . $path, ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
+		}
+	}
+
+	private function logo(bool $echo = true)
+	{
+		$logo = ' _____     _____    _____             _           ' . PHP_EOL . '| __  |___|  |  |  |     |___ ___ ___| |_ ___ ___ ' . PHP_EOL . '|    -| . |    -|  | | | | . |   |_ -|  _| -_|  _|' . PHP_EOL . '|__|__|___|__|__|  |_|_|_|___|_|_|___|_| |___|_| ';
+
+		$version = 'v' . self::VERSION . PHP_EOL;
+
+		$desc = 'Rise of Kingdom screenshot analysis' . PHP_EOL;
+
+		$out = PHP_EOL;
+		$out .= TinyCLI::text_style($logo, ['fg' => 'red', 'style' => 'bold']);
+		$out .= TinyCLI::text_style($version, ['fg' => 'dark_gray']);
+		$out .= TinyCLI::text_style($desc, ['fg' => 'yellow']);
+
+		if (!$echo)
+			return $echo;
+
+		TinyCLI::echo($out);
+	}
+
+	private function shutdown()
+	{
+		TinyCLI::cli_echo_footer();
+		TinyCLI::cli_echo_made_with_love('NY');
+	}
+
+	private function template(string $key, $alt = false)
+	{
+		return $this->arg[$key] ?? $this->template[$key] ?? $alt;
 	}
 
 	private static function apply_callback($callback, &$arg): void
@@ -343,10 +417,9 @@ class RokMonster
 			}
 		}
 
-		TinyCLI::cli_echo($callback, ['header' => 'error', 'function' => __FUNCTION__]);
+		TinyCLI::echo($callback, ['header' => 'error', 'function' => __FUNCTION__]);
 	}
 
-	// build user words
 	private static function build_user_words(array $data, $keys = [], string $output_path): bool
 	{
 		// explode if string
@@ -372,51 +445,20 @@ class RokMonster
 		return false;
 	}
 
-	private static function delete_file(string $file, bool $debug = false): void
+	private function exportCSV(): bool
 	{
-		if (!$debug)
-			unlink($file);
-	}
-
-	private function logo(bool $echo = true)
-	{
-		$logo = '
- _____     _____    _____             _           
-| __  |___|  |  |  |     |___ ___ ___| |_ ___ ___ 
-|    -| . |    -|  | | | | . |   |_ -|  _| -_|  _|
-|__|__|___|__|__|  |_|_|_|___|_|_|___|_| |___|_| ';
-		$desc = 'Rise of Kingdom screenshot analysis' . PHP_EOL . PHP_EOL;
-
-		$version = 'v' . $this->version . PHP_EOL;
-
-		$out = null;
-		$out .= TinyCLI::text_style($logo, ['fg' => 'red', 'style' => 'bold']);
-		$out .= TinyCLI::text_style($version, ['fg' => 'dark_gray']);
-		$out .= TinyCLI::text_style($desc, ['fg' => 'yellow']);
-
-		if (!$echo)
-			return $echo;
-
-		echo $out;
-	}
-
-	private static function output_csv(array $data, &$output_path, string $input_path): bool
-	{
-		if (!self::setup_output_path($output_path, $input_path))
-			return false;
-
-		$output_path_csv = $output_path . '/' . time() . '.csv';
+		$output_path_csv = $this->env('output_path') . DIRECTORY_SEPARATOR . time() . '.csv';
 
 		// we need at least 1 record
-		if (!isset($data[0]))
+		if (!isset($this->data[0]))
 			return false;
 
 		// build headers
-		$headers = array_keys($data[0]);
+		$headers = array_keys($this->data[0]);
 
 		// build csv
 		$csv = [];
-		foreach ($data as $row) {
+		foreach ($this->data as $row) {
 			$tmp = [];
 			foreach ($headers as $key)
 				$tmp[] = $row[$key] ?? '';
@@ -435,13 +477,13 @@ class RokMonster
 		if (fclose($fp))
 			return true;
 
-		TinyCLI::cli_echo('Can\'t close php://output', ['header' => 'error']);
+		TinyCLI::echo('Can\'t close php://output', ['header' => 'error']);
 
 		// something failed while writing
 		return false;
 	}
 
-	private static function setup_languages($langs = ['eng']): array
+	private static function setupLanguages($langs = ['eng']): array
 	{
 		// explode if string
 		if (is_string($langs))
@@ -478,23 +520,9 @@ class RokMonster
 
 		// return default lang if none matched
 		if (empty($output))
-			$output = [ROK_CLI_OCR_LANG => ROK_CLI_OCR_LANG];
+			$output = [$langs[0] => $langs[0]];
 
 		// return all keys
 		return array_merge($def, $output);
-	}
-
-	private static function setup_output_path(&$output_path, $input_path = null)
-	{
-		if (!$output_path and $input_path)
-			$output_path = $input_path . '/output';
-
-		if (!is_dir($output_path))
-			@mkdir($output_path, 0775, true);
-
-		if (!is_dir($output_path))
-			TinyCLI::cli_echo('Creating $output_path ' . $output_path, ['header' => 'error', 'function' => __FUNCTION__]);
-
-		return true;
 	}
 }
