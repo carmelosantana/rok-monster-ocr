@@ -39,16 +39,13 @@ class RoKMonster
 
 	public function ocr()
 	{
-		// extract langs
-		extract(self::setupLanguages());
-
 		// start vars
 		$data = [];
 		$count = 0;
 
 		// is template loaded or are we searching all?
 		if ($this->env('job')) {
-			if ($this->template = $this->templates->get($this->env('job'))) {
+			if ($this->template = $this->templates->get($this->env('job'), [])) {
 				TinyCLI::echo('Loaded ' . $this->template[$this->templates::TITLE], ['format' => 'bold']);
 			} else {
 				TinyCLI::echo('No template found.', ['format' => 'bold', 'header' => 'error', 'exit' => true]);
@@ -82,7 +79,7 @@ class RoKMonster
 					continue;
 				}
 
-				if ($image_distortion > (float) ($distortion > 0 ? $distortion : $profile['distortion'])) {
+				if ($image_distortion > (float) $this->template('distortion') ) {
 					TinyCLI::echo('Skip' . PHP_EOL);
 
 					// skip to next
@@ -115,13 +112,16 @@ class RoKMonster
 
 			// ocr each image part
 			foreach ($images as $key => $image) {
+				// extract langs
+				extract(self::setupLanguages($this->templateSchema($key, 'lang', 'eng')));
+
 				// ocr
 				$ocr = (new TesseractOCR($image))
 					->tessdataDir($this->env('tessdata', null))
 
 					// provided by profile
-					->configFile(($this->template('ocr_schema')[$key]['config'] ?? null))
-					->allowlist(($this->template('ocr_schema')[$key]['allowlist'] ?? null))
+					->configFile($this->templateSchema($key, 'config_file', null))
+					->allowlist($this->templateSchema($key, 'allowlist', null))
 
 					// TODO: Check language bug with $rus
 					// RoK Supported: English, Arabic, Chinese, French, German, Indonesian, Italian, Japanese, Kanuri, Korean, Malay, Portuguese, Russian, Simplified Chinese, Spanish, Thai, Traditional Chinese, Turkish, Vietnamese
@@ -132,8 +132,8 @@ class RoKMonster
 					// ->userPatterns($user_patterns)
 
 					// settings:
-					->oem((int) $this->template('oem'))
-					->psm((int) $this->template('psm'))
+					->oem((int) $this->templateSchema($key, 'oem'))
+					->psm((int) $this->templateSchema($key, 'psm'))
 
 					// Reading Rainbow!
 					->run();
@@ -162,9 +162,8 @@ class RoKMonster
 
 	public function ocrDisplay()
 	{
-		if (!empty($this->data)) {
-			TinyCLI::cli_echo_table(($header ?? null), $this->data);
-		}
+		if (!empty($this->data))
+			TinyCLI::cli_echo_table($this->template('table'), $this->data);
 	}
 
 	public function ocrExport()
@@ -298,7 +297,6 @@ class RoKMonster
 	{
 		if ($this->template('autocrop')) {
 			$file_crop = $this->env('output_path') . DIRECTORY_SEPARATOR . pathinfo($file, PATHINFO_BASENAME);
-			var_dump($file_crop);
 			new AutoCrop($file, $file_crop);
 			return $file_crop;
 		}
@@ -359,7 +357,7 @@ class RoKMonster
 			'tmp_path'
 		];
 
-		foreach ( $paths as $path ){
+		foreach ($paths as $path) {
 			if (file_exists($this->env($path, '')))
 				continue;
 
@@ -399,6 +397,12 @@ class RoKMonster
 	private function template(string $key, $alt = false)
 	{
 		return $this->arg[$key] ?? $this->template[$key] ?? $alt;
+	}
+
+	private function templateSchema($key, string $option, $alt = false)
+	{
+		// per crop args, template args, user args, .env defaults
+		return $this->template['ocr_schema'][$key][$option] ?? $this->template[$option] ?? $this->args[$option] ?? $this->env($option, $alt);
 	}
 
 	private static function apply_callback($callback, &$arg): void
@@ -517,10 +521,6 @@ class RoKMonster
 			if (array_key_exists($lang, $def))
 				$output[$lang] = $lang;
 		}
-
-		// return default lang if none matched
-		if (empty($output))
-			$output = [$langs[0] => $langs[0]];
 
 		// return all keys
 		return array_merge($def, $output);
