@@ -1,9 +1,5 @@
 <?php
 
-declare(strict_types=1);
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
 
-use carmelosantana\RoKMonster\RoKMonster;
-
-require_once __DIR__ . '/vendor/autoload.php';
-
-new RoKMonster();
+(new carmelosantana\RoKMonster\RoKMonster())->run();
