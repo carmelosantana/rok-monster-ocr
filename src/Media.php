@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace carmelosantana\RoKMonster;
 
 use carmelosantana\RoKMonster\AutoCrop;
-use carmelosantana\RoKMonster\TinyCLI;
+use carmelosantana\TinyCLI\TinyCLI;
 use jamesheinrich\getid3\getID3;
+use Jenssegers\ImageHash\ImageHash;
+use Jenssegers\ImageHash\Implementations\DifferenceHash;
 use Treinetic\ImageArtist\lib\Image as ImageArtist;
 
 class Media
 {
+	private object $hasher;
+
 	// apply scale factor to crop points
 	public static function applyScale(array $crop, float $scale): array
 	{
@@ -67,6 +71,17 @@ class Media
 		return $output;
 	}
 
+    public function fingerprint(string $path)
+    {
+        $this->hasher = new ImageHash(new DifferenceHash());
+
+        return $this->hasher->hash($path);
+    }
+
+	public function fingerprintDistance($input_1, $input_2){
+		return $this->hasher->distance($input_1, $input_2);		
+	}
+
 	public static function getMIMEContentType(string $file)
 	{
 		foreach (['image', 'video'] as $type)
@@ -77,10 +92,10 @@ class Media
 	}
 
 	// get scale factor between 2 images
-	public static function getScaleFactor(string $img1, string $img2): float
+	public static function getScaleFactor($img1, $img2): float
 	{
-		list($img1_width, $img1_height) = getimagesize($img1);
-		list($img2_width, $img2_height) = getimagesize($img2);
+		list($img1_width, $img1_height) = is_array($img1) ? $img1 : getimagesize($img1);
+		list($img2_width, $img2_height) = is_array($img2) ? $img2 : getimagesize($img2);
 
 		return round(($img1_height / $img2_height), 5);
 	}
