@@ -6,9 +6,9 @@ namespace carmelosantana\RoKMonster;
 
 use carmelosantana\RoKMonster\AutoCrop;
 use carmelosantana\RoKMonster\Media;
-use carmelosantana\RoKMonster\TinyCLI;
 use carmelosantana\RoKMonster\Templates;
 use carmelosantana\RoKMonster\Transformer;
+use carmelosantana\TinyCLI\TinyCLI;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
 class RoKMonster
@@ -16,8 +16,12 @@ class RoKMonster
 	public array $data;
 
 	private array $args;
+
 	private array $template;
+	
 	private object $templates;
+	
+	private object $media;
 
 	const VERSION = '0.3.0';
 
@@ -54,7 +58,9 @@ class RoKMonster
 			TinyCLI::echo('Searching available templates.', ['format' => 'bold']);
 		}
 
+
 		// process each image file
+		
 		foreach ($this->getMediaFiles() as $file) {
 			// should only be an image
 			if (!Media::isMIMEContentType($file, 'image')) continue;
@@ -70,26 +76,38 @@ class RoKMonster
 			$file = $this->imagePrepare($file);
 
 			// match image to sample retrieve templates
-			if ($this->template('compare_to_sample')) {
-				$image_distortion = Media::getCompareDistortion($this->template('sample'), $file, true);
-				TinyCLI::echo('Distortion: ' . $image_distortion);
+			if ($this->env('compare_to_sample', 1)) {
+				switch($this->template('compare_to_sample')){
+					case 'distortion':
+						$image_distortion = Media::getCompareDistortion($this->template('sample'), $file, true);
+						TinyCLI::echo('Distortion: ' . $image_distortion);		
+						break;
 
-				if (!$image_distortion) {
-					TinyCLI::echo('Skip, missing image' . PHP_EOL);
-					continue;
+					// case 'fingerprint':
+					default:
+						$fingerprint = $this->media->fingerprint($file);
+						TinyCLI::echo('Fingerprint: ' . $fingerprint);
+						TinyCLI::echo('Distance: ' . $this->media->fingerprintDistance($fingerprint, $this->template('fingerprint')));
+						break;
 				}
 
-				if ($image_distortion > (float) $this->template('distortion') ) {
-					TinyCLI::echo('Skip' . PHP_EOL);
+				// if (!$image_distortion) {
+				// 	TinyCLI::echo('Skip, missing image' . PHP_EOL);
+				// 	continue;
+				// }
 
-					// skip to next
-					continue;
-				}
+				// if ($image_distortion > (float) $this->template('distortion') ) {
+				// 	TinyCLI::echo('Skip' . PHP_EOL);
+
+				// 	// skip to next
+				// 	continue;
+				// }
 			}
 
 			// determine image scale factor for crop points
-			$scale_factor = Media::getScaleFactor($file, $this->template('sample'));
-
+			// $scale_factor = Media::getScaleFactor($file, $this->template('sample'));
+			$scale_factor = 1;
+			
 			// slice image for parts
 			$images = [];
 			foreach ($this->template['ocr_schema'] as $key => $schema) {
@@ -142,7 +160,7 @@ class RoKMonster
 				$tmp[$key] = Transformer::strRemoveExtraLineBreaks($ocr);
 
 				if (isset($this->template('ocr_schema')[$key]['callback']))
-					self::apply_callback($this->template('ocr_schema')[$key]['callback'], $tmp[$key]);
+					self::applyCallback($this->template('ocr_schema')[$key]['callback'], $tmp[$key]);
 
 				TinyCLI::cli_debug_echo($tmp[$key]);
 
@@ -248,6 +266,44 @@ class RoKMonster
 			unlink($file);
 	}
 
+	private function exportCSV(): bool
+	{
+		$output_path_csv = $this->env('output_path') . DIRECTORY_SEPARATOR . time() . '.csv';
+
+		// we need at least 1 record
+		if (!isset($this->data[0]))
+			return false;
+
+		// build headers
+		$headers = array_keys($this->data[0]);
+
+		// build csv
+		$csv = [];
+		foreach ($this->data as $row) {
+			$tmp = [];
+			foreach ($headers as $key)
+				$tmp[] = $row[$key] ?? '';
+
+			$csv[] = $tmp;
+		}
+
+		// save to CSV
+		$fp = fopen($output_path_csv, 'w');
+		fputcsv($fp, $headers);
+		foreach ($csv as $row) {
+			fputcsv($fp, $row);
+		}
+
+		// on success return path of finished CSV
+		if (fclose($fp))
+			return true;
+
+		TinyCLI::echo('Can\'t close php://output', ['header' => 'error']);
+
+		// something failed while writing
+		return false;
+	}
+
 	private function getMediaFiles($path = null): array
 	{
 		// setup files
@@ -265,9 +321,9 @@ class RoKMonster
 
 		// go through DIR
 		$files_output = [];
-		foreach ($files as $fi) {
-			if (!is_string($fi))
-				$file = $fi->getPathname();
+		foreach ($files as $file) {
+			if (!is_string($file))
+				$file = $file->getPathname();
 
 			switch (Media::getMIMEContentType($file)) {
 				case 'image':
@@ -333,7 +389,7 @@ class RoKMonster
 		if (!$this->env('templates')) {
 			$path = '';
 		} else {
-			$path = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $this->env('templates', '');
+			$path = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR;
 		}
 
 		$this->args['template_path'] = $path;
@@ -341,16 +397,10 @@ class RoKMonster
 		$this->templates = new Templates($path);
 	}
 
-	private function isDebug()
-	{
-		if ($this->envEnabled('debug'))
-			return true;
-
-		return false;
-	}
-
 	private function initMediaLibrary(): void
 	{
+		$this->media = new Media();
+		
 		$paths = [
 			'input_path',
 			'output_path',
@@ -367,6 +417,14 @@ class RoKMonster
 			if (!is_dir($this->env($path, '')))
 				TinyCLI::echo('Missing or invalid --' . $path, ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
 		}
+	}
+
+	private function isDebug()
+	{
+		if ($this->envEnabled('debug'))
+			return true;
+
+		return false;
 	}
 
 	private function logo(bool $echo = true)
@@ -405,7 +463,7 @@ class RoKMonster
 		return $this->template['ocr_schema'][$key][$option] ?? $this->template[$option] ?? $this->args[$option] ?? $this->env($option, $alt);
 	}
 
-	private static function apply_callback($callback, &$arg): void
+	private static function applyCallback($callback, &$arg): void
 	{
 		if (!$callback)
 			return;
@@ -422,69 +480,6 @@ class RoKMonster
 		}
 
 		TinyCLI::echo($callback, ['header' => 'error', 'function' => __FUNCTION__]);
-	}
-
-	private static function build_user_words(array $data, $keys = [], string $output_path): bool
-	{
-		// explode if string
-		if (is_string($keys))
-			$keys = explode(',', $keys);
-
-		// no keys provided
-		if (!is_array($keys))
-			return false;
-
-		foreach ($data as $entry) {
-			foreach ($keys as $key) {
-				if (isset($entry[$key]))
-					$user_words[] = $entry[$key];
-			}
-		}
-
-		// save user words to file
-		$output_path .= '/' . time() . '-user-words.txt';
-		if (file_put_contents($output_path, implode(PHP_EOL, $user_words)))
-			return true;
-
-		return false;
-	}
-
-	private function exportCSV(): bool
-	{
-		$output_path_csv = $this->env('output_path') . DIRECTORY_SEPARATOR . time() . '.csv';
-
-		// we need at least 1 record
-		if (!isset($this->data[0]))
-			return false;
-
-		// build headers
-		$headers = array_keys($this->data[0]);
-
-		// build csv
-		$csv = [];
-		foreach ($this->data as $row) {
-			$tmp = [];
-			foreach ($headers as $key)
-				$tmp[] = $row[$key] ?? '';
-
-			$csv[] = $tmp;
-		}
-
-		// save to CSV
-		$fp = fopen($output_path_csv, 'w');
-		fputcsv($fp, $headers);
-		foreach ($csv as $row) {
-			fputcsv($fp, $row);
-		}
-
-		// on success return path of finished CSV
-		if (fclose($fp))
-			return true;
-
-		TinyCLI::echo('Can\'t close php://output', ['header' => 'error']);
-
-		// something failed while writing
-		return false;
 	}
 
 	private static function setupLanguages($langs = ['eng']): array
