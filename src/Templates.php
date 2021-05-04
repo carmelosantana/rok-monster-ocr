@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace carmelosantana\RoKMonster;
 
 use DirectoryIterator;
+use carmelosantana\TinyCLI\TinyCLI;
 
 class Templates
 {
-    const AUTHOR = 'AUTHOR';
-    const TITLE = 'TITLE';
+    const AUTHOR = 'author';
+    const TITLE = 'title';
     
     public array $allowed_image_types = [
         'png',
@@ -27,7 +28,7 @@ class Templates
         
         $this->dir = $dir;
 
-        $this->load_templates($dir);
+        $this->loadTemplates($dir);
 
         return $this;
     }
@@ -40,8 +41,7 @@ class Templates
         return $this->templates;
     }
 
-
-    private function load_templates()
+    private function loadTemplates()
     {
         if (!is_dir($this->dir)) {
             $this->templates = [];
@@ -64,7 +64,7 @@ class Templates
 
                 // check if sample is defined and exists
                 if (isset($tmp['sample']) and TinyCLI::is_enabled($tmp['sample'])) {
-                    if (!$tmp['sample'] = $this->check_allowed_image_types($template_sample))
+                    if (!$tmp['sample'] = $this->checkAllowedImageTypes($template_sample))
                         continue;
                 }
 
@@ -74,7 +74,7 @@ class Templates
         }
     }
 
-    private function check_allowed_image_types($base = null)
+    private function checkAllowedImageTypes($base = null)
     {
         foreach ($this->allowed_image_types as $ext) {
             $image = $base . '.' . $ext;
