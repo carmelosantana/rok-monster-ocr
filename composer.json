@@ -1,5 +1,5 @@
 {
-    "name": "carmelosantana/rok-monster-cli",
+    "name": "carmelosantana/rokmonster-cli",
     "description": "CLI tools for Rise of Kingdoms.",
     "keywords": [
         "Rise of Kingdoms",
@@ -7,18 +7,25 @@
     ],
     "homepage": "https://github.com/carmelosantana/rok-monster-cli",
     "license": "MIT",
+    "repositories": [
+        {
+        "type": "vcs",
+        "url": "https://github.com/carmelosantana/TinyCLI.git"
+        }
+    ],
     "require": {
         "php": ">=7.4.0",
         "league/color-extractor": "0.3.*",
         "thiagoalessio/tesseract_ocr": "^2",
-        "wujunze/php-cli-color": "dev-master",
         "php-ffmpeg/php-ffmpeg": "^0.17.0",
         "treinetic/imageartist": "^1.0",
-        "jc21/clitable": "^1.2",
         "james-heinrich/getid3": "^1.9",
         "symfony/process": "^5.2",
         "wp-cli/php-cli-tools": "^0.11.12",
-        "vlucas/phpdotenv": "^5.3"
+        "vlucas/phpdotenv": "^5.3",
+        "carmelosantana/tinycli": "dev-main",
+        "jenssegers/imagehash": "^0.5.0",
+        "spatie/async": "^1.5"
     },
     "require-dev": {
         "clean/phpdoc-md": "^0.19.1"
