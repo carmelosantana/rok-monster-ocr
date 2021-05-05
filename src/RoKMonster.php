@@ -15,16 +15,21 @@ class RoKMonster
 {
 	public array $data;
 
-	private array $args;
+	public array $args;
 
-	private array $template;
+	public array $template;
 	
-	private object $templates;
+	public object $templates;
 	
-	private object $media;
-
 	const VERSION = '0.3.0';
-
+	
+	/**
+	 * Starts instance with provided arguments
+	 *
+	 * @param array $args User defined arguments for setting environment and job options
+	 *
+	 * @return object
+	 */
 	public function __construct(array $args = [])
 	{
 		$default = [];
@@ -60,7 +65,6 @@ class RoKMonster
 
 
 		// process each image file
-		
 		foreach ($this->getMediaFiles() as $file) {
 			// should only be an image
 			if (!Media::isMIMEContentType($file, 'image')) continue;
@@ -87,30 +91,26 @@ class RoKMonster
 					default:
 						$fingerprint = $this->media->fingerprint($file);
 						TinyCLI::echo('Fingerprint: ' . $fingerprint);
-						TinyCLI::echo('Distance: ' . $this->media->fingerprintDistance($fingerprint, $this->template('fingerprint')));
+
+						$image_distortion = $this->media->fingerprintDistance($fingerprint, $this->template('fingerprint'));
+						TinyCLI::echo('Distance: ' . $image_distortion);
 						break;
 				}
 
-				// if (!$image_distortion) {
-				// 	TinyCLI::echo('Skip, missing image' . PHP_EOL);
-				// 	continue;
-				// }
+				if ($image_distortion > (float) $this->template('threshold') ) {
+					TinyCLI::echo('Skip' . PHP_EOL);
 
-				// if ($image_distortion > (float) $this->template('distortion') ) {
-				// 	TinyCLI::echo('Skip' . PHP_EOL);
-
-				// 	// skip to next
-				// 	continue;
-				// }
+					// skip to next
+					continue;
+				}
 			}
 
 			// determine image scale factor for crop points
-			// $scale_factor = Media::getScaleFactor($file, $this->template('sample'));
-			$scale_factor = 1;
+			$scale_factor = Media::getScaleFactor($file, [$this->template('width'), $this->template('height')]);
 			
 			// slice image for parts
 			$images = [];
-			foreach ($this->template['ocr_schema'] as $key => $schema) {
+			foreach ($this->template('ocr_schema') as $key => $schema) {
 				// init for further use
 				$tmp[$key] = null;
 
@@ -399,6 +399,7 @@ class RoKMonster
 
 	private function initMediaLibrary(): void
 	{
+		// start media tools
 		$this->media = new Media();
 		
 		$paths = [
