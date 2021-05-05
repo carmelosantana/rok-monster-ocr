@@ -1,12 +1,19 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# in development
+examples/
 
-# rafa
-vendor
-composer.lock
+# user created
+.env
+.tests/
+Media/
 
-# dev
-.DS_Store
-.idea
-*.todo
-config.local.php
+# composer
+composer.phar
+vendor/
+
+# phpdoc
+phpdoc-md
+.phpdoc
+docs/phpdoc
+docs/README.md
+docs/RoKMonster.md
+docs/example.php
