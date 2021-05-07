@@ -18,11 +18,11 @@ class RoKMonster
 	public array $args;
 
 	public array $template;
-	
+
 	public object $templates;
-	
+
 	const VERSION = '0.3.0';
-	
+
 	/**
 	 * Starts instance with provided arguments
 	 *
@@ -81,13 +81,13 @@ class RoKMonster
 
 			// match image to sample retrieve templates
 			if ($this->env('compare_to_sample', 1)) {
-				switch($this->template('compare_to_sample')){
+				switch ($this->template('compare_to_sample')) {
 					case 'distortion':
 						$image_distortion = Media::getCompareDistortion($this->template('sample'), $file, true);
-						TinyCLI::echo('Distortion: ' . $image_distortion);		
+						TinyCLI::echo('Distortion: ' . $image_distortion);
 						break;
 
-					// case 'fingerprint':
+						// case 'fingerprint':
 					default:
 						$fingerprint = $this->media->fingerprint($file);
 						TinyCLI::echo('Fingerprint: ' . $fingerprint);
@@ -97,7 +97,7 @@ class RoKMonster
 						break;
 				}
 
-				if ($image_distortion > (float) $this->template('threshold') ) {
+				if ($image_distortion > (float) $this->template('threshold')) {
 					TinyCLI::echo('Skip' . PHP_EOL);
 
 					// skip to next
@@ -107,7 +107,7 @@ class RoKMonster
 
 			// determine image scale factor for crop points
 			$scale_factor = Media::getScaleFactor($file, [$this->template('width'), $this->template('height')]);
-			
+
 			// slice image for parts
 			$images = [];
 			foreach ($this->template('ocr_schema') as $key => $schema) {
@@ -386,15 +386,20 @@ class RoKMonster
 
 	private function initTemplates()
 	{
-		if (!$this->env('templates')) {
-			$path = '';
-		} else {
-			$path = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR;
-		}
+		// start template system
+		$this->templates = new Templates();
 
-		$this->args['template_path'] = $path;
+		// system templates
+		$path = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'templates';
+		$this->templates->load($path);
 
-		$this->templates = new Templates($path);
+		// load rok-monster-schema
+		$path = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'carmelosantana' . DIRECTORY_SEPARATOR . 'rok-monster-schema' . DIRECTORY_SEPARATOR . 'ocr';
+		$this->templates->load($path);
+
+		// load custom template
+		if ($this->env('template_path'))
+			$this->templates->load($this->env('template_path'));
 	}
 
 	private function initMediaLibrary(): void
