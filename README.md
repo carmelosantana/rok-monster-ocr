@@ -226,7 +226,7 @@ Now we breakdown the config and explain each part.
 
 ## Community
 
-Have a question, an idea, or need help geting started? Checkout our [Discord](https://discord.gg/drhxwVQ)!
+Have a question, an idea, or need help getting started? Checkout our [Discord](https://discord.gg/drhxwVQ)!
 
 Honorable mentions for [community](https://discord.gg/drhxwVQ) members who've donated time and resources to **rok-monster-cli** or [rokmonster.com](https://rokmonster.com).
 
