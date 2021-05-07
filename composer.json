@@ -1,16 +1,29 @@
 {
-    "name": "carmelosantana/rokmonster-cli",
-    "description": "CLI tools for Rise of Kingdoms.",
+    "name": "carmelosantana/rok-monster-ocr",
+    "description": "OCR tools for Rise of Kingdoms.",
     "keywords": [
         "Rise of Kingdoms",
-        "rok"
+        "rok",
+        "ocr"
     ],
-    "homepage": "https://github.com/carmelosantana/rok-monster-cli",
+    "homepage": "https://github.com/carmelosantana/rok-monster-ocr",
+    "type": "project",
+    "authors" : [
+        {
+            "name" : "Carmelo Santana",
+            "email" : "git@carmelosantana.com",
+            "homepage" : "https://carmelosantana.com"
+        }
+    ],
     "license": "MIT",
     "repositories": [
         {
-        "type": "vcs",
-        "url": "https://github.com/carmelosantana/TinyCLI.git"
+            "type": "vcs",
+            "url": "https://github.com/carmelosantana/rok-monster-schema.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/carmelosantana/TinyCLI.git"
         }
     ],
     "require": {
@@ -25,7 +38,8 @@
         "vlucas/phpdotenv": "^5.3",
         "carmelosantana/tinycli": "dev-main",
         "jenssegers/imagehash": "^0.5.0",
-        "spatie/async": "^1.5"
+        "spatie/async": "^1.5",
+        "carmelosantana/rok-monster-schema": "dev-main"
     },
     "require-dev": {
         "clean/phpdoc-md": "^0.19.1"
@@ -34,5 +48,9 @@
         "psr-4": {
             "carmelosantana\\RoKMonster\\": "src/"
         }
+    },
+    "support": {
+        "issues": "https://github.com/carmelosantana/rok-monster-ocr/issues",
+        "source": "https://github.com/carmelosantana/rok-monster-ocr"
     }
 }
