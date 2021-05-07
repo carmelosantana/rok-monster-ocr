@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace carmelosantana\RoKMonster;
 
-use carmelosantana\RoKMonster\TinyCLI;
-
 class Transformer
 {
     public static function strRemoveNonNumeric(string $string): string
