@@ -12,17 +12,7 @@ class Templates
 
     const TITLE = 'title';
 
-    private string $dir;
-
     private array $templates = [];
-
-    public function __construct($dir = null)
-    {
-        $this->dir = $dir;
-
-        if (is_dir($this->dir))
-            $this->loadTemplates();
-    }
 
     public function get($template = null, $alt = false)
     {
@@ -32,12 +22,21 @@ class Templates
         return $this->templates;
     }
 
-    private function loadTemplates()
+    public function load($dir)
     {
-        foreach (new DirectoryIterator($this->dir) as $di) {
+        // add trailing slash
+        if (substr($dir, -1) == DIRECTORY_SEPARATOR)
+            $dir .= DIRECTORY_SEPARATOR;
+
+        if (!is_dir($dir))
+            return $this;
+
+        foreach (new DirectoryIterator($dir) as $di) {
             if ($di->isDot() or $di->isLink() or $di->getExtension() != 'json') continue;
 
             $this->templates[$di->getBasename('.json')] = json_decode(file_get_contents($di->getPathname()), true);
         }
+
+        return $this;
     }
 }
