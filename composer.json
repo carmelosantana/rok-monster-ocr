@@ -33,12 +33,10 @@
         "php-ffmpeg/php-ffmpeg": "^0.17.0",
         "treinetic/imageartist": "^1.0",
         "james-heinrich/getid3": "^1.9",
-        "symfony/process": "^5.2",
         "wp-cli/php-cli-tools": "^0.11.12",
         "vlucas/phpdotenv": "^5.3",
         "carmelosantana/tinycli": "dev-main",
         "jenssegers/imagehash": "^0.5.0",
-        "spatie/async": "^1.5",
         "carmelosantana/rok-monster-schema": "dev-main"
     },
     "require-dev": {
