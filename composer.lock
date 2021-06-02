@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "55cdf30f183dc2b0c34e4e68a5f0e779",
+    "content-hash": "f3c3d63ad7e02527c687ed15e2dadba8",
     "packages": [
         {
             "name": "alchemy/binary-driver",
@@ -71,6 +71,43 @@
                 "source": "https://github.com/alchemy-fr/BinaryDriver/tree/master"
             },
             "time": "2020-02-12T19:35:11+00:00"
+        },
+        {
+            "name": "carmelosantana/adb",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/carmelosantana/php-adb.git",
+                "reference": "0e7a601eed5dfa130bb0482bd1bb9f1d22348d97"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/carmelosantana/php-adb/zipball/0e7a601eed5dfa130bb0482bd1bb9f1d22348d97",
+                "reference": "0e7a601eed5dfa130bb0482bd1bb9f1d22348d97",
+                "shasum": ""
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "carmelosantana\\ADB\\": "src/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Carmelo Santana",
+                    "email": "git@carmelosantana.com"
+                }
+            ],
+            "description": "Wrapper to help communicate with adb server.",
+            "support": {
+                "source": "https://github.com/carmelosantana/php-adb/tree/main",
+                "issues": "https://github.com/carmelosantana/php-adb/issues"
+            },
+            "time": "2021-05-01T01:43:22+00:00"
         },
         {
             "name": "carmelosantana/rok-monster-schema",
@@ -2213,7 +2250,8 @@
     "minimum-stability": "stable",
     "stability-flags": {
         "carmelosantana/tinycli": 20,
-        "carmelosantana/rok-monster-schema": 20
+        "carmelosantana/rok-monster-schema": 20,
+        "carmelosantana/adb": 20
     },
     "prefer-stable": false,
     "prefer-lowest": false,
