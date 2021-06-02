@@ -148,7 +148,7 @@ class Media
 		$output_file = $output_path . '/' . pathinfo($input)['basename'];
 	
 		// frames
-		$getID3 = new \getID3;
+		$getID3 = new getID3;
 		$input_info = $getID3->analyze($input);
 		$frames = round(round($input_info['video']['frame_rate'])*round($fps_multiplier));
 	
