@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace carmelosantana\RoKMonster;
 
-use carmelosantana\RoKMonster\AutoCrop;
 use carmelosantana\TinyCLI\TinyCLI;
 use jamesheinrich\getid3\getID3;
 use Jenssegers\ImageHash\ImageHash;
@@ -181,7 +180,7 @@ class Media
 		}
 	
 		// command
-		TinyCLI::cli_debug_echo($cmd, ['header' => 'FFmpeg']);	
+		TinyCLI::echoDebug($cmd, ['header' => 'FFmpeg']);	
 		$output = exec($cmd);
 	}
 
