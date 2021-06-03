@@ -16,7 +16,7 @@
         }
     ],
     "license": "MIT",
-    "repositories": [
+    "repositories": [        
         {
             "type": "vcs",
             "url": "https://github.com/carmelosantana/rok-monster-schema.git"
