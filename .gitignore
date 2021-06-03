@@ -5,6 +5,7 @@ examples/
 .env
 .tests/
 Media/
+*.csv
 
 # composer
 composer.phar
