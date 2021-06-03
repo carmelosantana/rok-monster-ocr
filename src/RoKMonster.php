@@ -13,15 +13,17 @@ use thiagoalessio\TesseractOCR\TesseractOCR;
 
 class RoKMonster
 {
-	public array $data;
+	public array $data = [];
 
-	public array $args;
+	public array $done = [];
 
-	public array $template;
+	public array $args = [];
+
+	public array $template = [];
 
 	public object $templates;
 
-	const VERSION = '0.3.0';
+	const VERSION = '0.3.2';
 
 	/**
 	 * Starts instance with provided arguments
@@ -44,6 +46,21 @@ class RoKMonster
 
 		// merge requested args with default
 		$this->args = TinyCLI::parseArgs($args, $default);
+
+		// setup environment, args etc
+		$this->initEnv();
+
+		// are we debugging?
+		$this->initDebug();
+
+		// setup media library, input/output DIRs
+		$this->initMediaLibrary();
+
+		// setup templates, user and system
+		$this->initTemplates();
+
+		// start debugging output
+		$this->debugEnv();
 	}
 
 	public function ocr()
@@ -52,7 +69,7 @@ class RoKMonster
 		$data = [];
 		$count = 0;
 
-		// is template loaded or are we searching all?
+		// is -0template loaded or are we searching all?
 		if ($this->env('job')) {
 			if ($this->template = $this->templates->get($this->env('job'), [])) {
 				TinyCLI::echo('Loaded ' . $this->template[$this->templates::TITLE], ['format' => 'bold']);
@@ -62,7 +79,6 @@ class RoKMonster
 		} else {
 			TinyCLI::echo('Searching available templates.', ['format' => 'bold']);
 		}
-
 
 		// process each image file
 		foreach ($this->getMediaFiles() as $file) {
@@ -87,13 +103,12 @@ class RoKMonster
 						TinyCLI::echo('Distortion: ' . $image_distortion);
 						break;
 
-						// case 'fingerprint':
 					default:
 						$fingerprint = $this->media->fingerprint($file);
-						TinyCLI::echo('Fingerprint: ' . $fingerprint);
+						TinyCLI::echo($fingerprint, ['header' => 'Fingerprint']);
 
 						$image_distortion = $this->media->fingerprintDistance($fingerprint, $this->template('fingerprint'));
-						TinyCLI::echo('Distance: ' . $image_distortion);
+						TinyCLI::echo((string) $image_distortion, ['header' => 'Distance']);
 						break;
 				}
 
@@ -156,13 +171,12 @@ class RoKMonster
 					// Reading Rainbow!
 					->run();
 
-				TinyCLI::echo(basename($image), ['header' => 'OCR', 'fg' => 'light_gray']);
 				$tmp[$key] = Transformer::strRemoveExtraLineBreaks($ocr);
+
+				TinyCLI::echo($tmp[$key]);
 
 				if (isset($this->template('ocr_schema')[$key]['callback']))
 					self::applyCallback($this->template('ocr_schema')[$key]['callback'], $tmp[$key]);
-
-				TinyCLI::cli_debug_echo($tmp[$key]);
 
 				// remove ocr snippet
 				$this->deleteFile($image);
@@ -180,43 +194,52 @@ class RoKMonster
 
 	public function ocrDisplay()
 	{
-		if (!empty($this->data))
-			TinyCLI::cli_echo_table($this->template('table'), $this->data);
+		if (empty($this->data))
+			return;
+
+		//TODO: remove temp patch for $schema
+		$schema = [];
+		$c = 0;
+		foreach ($this->data[0] as $k => $v) {
+			$schema[] = [
+				$k,
+				$k,
+				false,
+
+				// assume the first value is an ID and color green
+				$c == 0 ? 'green' : 'white',
+			];
+
+			$c++;
+		}
+
+		TinyCLI::table($this->data, $schema) . PHP_EOL;
 	}
 
 	public function ocrExport()
 	{
-		if (!$this->env('export'))
+		if (!$this->env('export') or empty($this->data))
 			return;
 
 		$export = explode(',', strtolower($this->env('export')));
 
 		// csv
-		if (in_array('csv', $export) and !empty($this->data))
-			$this->exportCSV();
+		if (in_array('csv', $export)) {
+			if ($export = $this->exportCSV()) {
+				TinyCLI::echo($export, ['header' => 'CSV', 'fg' => 'green']);
+			}
+		}
 	}
 
 	public function run(): void
 	{
 		$this->logo();
 
-		$this->initEnv();
-
-		$this->initDebug();
-
-		$this->initMediaLibrary();
-
-		$this->initTemplates();
-
-		$this->debugEnv();
-
 		$this->ocr();
 
 		$this->ocrDisplay();
 
 		$this->ocrExport();
-
-		$this->shutdown();
 	}
 
 	public function set(string $key, string $value)
@@ -266,9 +289,9 @@ class RoKMonster
 			unlink($file);
 	}
 
-	private function exportCSV(): bool
+	private function exportCSV(): bool|string
 	{
-		$output_path_csv = $this->env('output_path') . DIRECTORY_SEPARATOR . time() . '.csv';
+		$output_path_csv = getcwd() . DIRECTORY_SEPARATOR . time() . '.csv';
 
 		// we need at least 1 record
 		if (!isset($this->data[0]))
@@ -296,7 +319,7 @@ class RoKMonster
 
 		// on success return path of finished CSV
 		if (fclose($fp))
-			return true;
+			return $output_path_csv;
 
 		TinyCLI::echo('Can\'t close php://output', ['header' => 'error']);
 
@@ -352,7 +375,7 @@ class RoKMonster
 	private function imagePrepare(string $file): string
 	{
 		if ($this->template('autocrop')) {
-			$file_crop = $this->env('output_path') . DIRECTORY_SEPARATOR . pathinfo($file, PATHINFO_BASENAME);
+			$file_crop = $this->env('input_path') . DIRECTORY_SEPARATOR . pathinfo($file, PATHINFO_BASENAME);
 			new AutoCrop($file, $file_crop);
 			return $file_crop;
 		}
@@ -406,21 +429,29 @@ class RoKMonster
 	{
 		// start media tools
 		$this->media = new Media();
-		
+
 		$paths = [
-			'input_path',
-			'output_path',
-			'tmp_path'
+			'input_path' => '',
+			'tmp_path' => sys_get_temp_dir()
 		];
 
-		foreach ($paths as $path) {
+		foreach ($paths as $path => $def) {
 			if (file_exists($this->env($path, '')))
 				continue;
 
-			if (!is_dir($this->env($path)) and $this->env($path))
-				@mkdir($this->env($path, ''), 0775, true);
+			if (!is_dir($this->env($path, '')) and $this->env($path)) {
+				@mkdir($this->env($path), 0775, true);
 
-			if (!is_dir($this->env($path, '')))
+				if (is_dir($this->env($path)))
+					continue;
+			}
+
+			if (file_exists($def)) {
+				$this->set($path, $def);
+				continue;
+			}
+
+			if (!is_dir($this->env($path)))
 				TinyCLI::echo('Missing or invalid --' . $path, ['header' => 'error', 'function' => __FUNCTION__, 'exit' => true]);
 		}
 	}
@@ -452,12 +483,6 @@ class RoKMonster
 		TinyCLI::echo($out);
 	}
 
-	private function shutdown()
-	{
-		TinyCLI::cli_echo_footer();
-		TinyCLI::cli_echo_made_with_love('NY');
-	}
-
 	private function template(string $key, $alt = false)
 	{
 		return $this->arg[$key] ?? $this->template[$key] ?? $alt;
@@ -466,7 +491,7 @@ class RoKMonster
 	private function templateSchema($key, string $option, $alt = false)
 	{
 		// per crop args, template args, user args, .env defaults
-		return $this->template['ocr_schema'][$key][$option] ?? $this->template[$option] ?? $this->args[$option] ?? $this->env($option, $alt);
+		return $this->args[$option] ?? $this->template['ocr_schema'][$key][$option] ?? $this->template[$option] ?? $this->env($option, $alt);
 	}
 
 	private static function applyCallback($callback, &$arg): void
