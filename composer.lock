@@ -109,12 +109,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/carmelosantana/TinyCLI.git",
-                "reference": "ccb85fa07a1480adc55c0a96f6c3dab614329fde"
+                "reference": "d5b4095b118c97494ca06bb2e9bd7503317da923"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/carmelosantana/TinyCLI/zipball/ccb85fa07a1480adc55c0a96f6c3dab614329fde",
-                "reference": "ccb85fa07a1480adc55c0a96f6c3dab614329fde",
+                "url": "https://api.github.com/repos/carmelosantana/TinyCLI/zipball/d5b4095b118c97494ca06bb2e9bd7503317da923",
+                "reference": "d5b4095b118c97494ca06bb2e9bd7503317da923",
                 "shasum": ""
             },
             "require": {
@@ -142,7 +142,7 @@
                 "source": "https://github.com/carmelosantana/TinyCLI/tree/main",
                 "issues": "https://github.com/carmelosantana/TinyCLI/issues"
             },
-            "time": "2021-06-03T14:32:29+00:00"
+            "time": "2021-06-03T20:50:37+00:00"
         },
         {
             "name": "doctrine/cache",
