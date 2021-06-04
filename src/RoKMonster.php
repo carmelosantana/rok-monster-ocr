@@ -23,7 +23,7 @@ class RoKMonster
 
 	public object $templates;
 
-	const VERSION = '0.3.2';
+	const VERSION = '0.3.3';
 
 	/**
 	 * Starts instance with provided arguments
