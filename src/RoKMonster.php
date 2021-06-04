@@ -289,7 +289,7 @@ class RoKMonster
 			unlink($file);
 	}
 
-	private function exportCSV(): bool|string
+	private function exportCSV()
 	{
 		$output_path_csv = getcwd() . DIRECTORY_SEPARATOR . time() . '.csv';
 
