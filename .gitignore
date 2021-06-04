@@ -1,11 +1,9 @@
-# in development
-examples/
-
 # user created
 .env
 .tests/
 Media/
 *.csv
+tmp/
 
 # composer
 composer.phar
