@@ -121,6 +121,10 @@ composer install
 - Move all images to your "Input Path" as defined in your `.env` file or via CLI argument `--input_path`.
   - By default a "Media" folder is created in your current working directory if no directory is supplied.
 
+## Docker usage
+
+- Read [docker.md](./docker.md)
+
 ### Start a job via CLI
 
 1. Capture the necessary screens specified per the given job. In this example we need the **Governor More Info** profile screen.
