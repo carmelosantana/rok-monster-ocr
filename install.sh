@@ -2,9 +2,10 @@
 # Installs rok-monster-cli + all dependancies.
 
 # Setup
-DEMO_VER="1.0.3"
+DEMO_VER="1.0.4"
 PHP="php8.0"
-ROK_MONSTER_CLI="https://github.com/carmelosantana/rok-monster-cli"
+ROK_MONSTER_SLUG="rok-monster-ocr"
+ROK_MONSTER_URL="https://github.com/carmelosantana/$ROK_MONSTER_SLUG"
 ROK_MONSTER_SAMPLES="https://github.com/carmelosantana/rok-monster-samples"
 TESSDATA="https://github.com/tesseract-ocr/tessdata"
 CHECK_FILE="rok.php"
@@ -44,27 +45,27 @@ if [ "$AUTOMATE" != true ]; then
     fi
 fi 
 
-# Update system
-sudo apt update
-# https://bugs.launchpad.net/ubuntu/+source/ansible/+bug/1833013 - 1/2/2020
-UCF_FORCE_CONFOLD=1 DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -qq -y upgrade
+# Setup PPA
+echo | sudo add-apt-repository ppa:ondrej/php
+
+# Update PPA
+sudo apt Update
 
 # Install depedancies
 sudo apt -y install git imagemagick ffmpeg tesseract-ocr
 
 # Install php
-echo | sudo add-apt-repository ppa:ondrej/php
 sudo apt -y install $PHP $PHP-cli $PHP-common $PHP-gd $PHP-mbstring $PHP-snmp $PHP-xml $PHP-zip php-imagick
 
 # Install rok-monster-cli + sample data
 if [ ! -f "$CHECK_FILE" ]; then
-    git clone $ROK_MONSTER_CLI
-    cd rok-monster-cli
+    git clone "$ROK_MONSTER_URL"
+    cd "$ROK_MONSTER_SLUG"
 fi
-git clone $ROK_MONSTER_SAMPLES
+git clone --depth 1 $ROK_MONSTER_SAMPLES
 
 # Install Tesseract models from git
-git clone $TESSDATA
+git clone --depth 1 $TESSDATA
 
 # Get composer
 EXPECTED_CHECKSUM="$(wget -q -O - https://composer.github.io/installer.sig)"
@@ -95,6 +96,6 @@ echo " +----------------+"
 echo
 
 # Launch demo
-php rok.php --job=governor_more_info_kills \
+php rok.php --job=governor-more-info-kills \
     --input_path="rok-monster-samples/media/governor-more-info-kills/" \
     --tessdata="tessdata/"
