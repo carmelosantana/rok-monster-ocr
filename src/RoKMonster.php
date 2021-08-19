@@ -81,7 +81,7 @@ class RoKMonster
 		}
 
 		// process each image file
-		foreach ($this->getMediaFiles() as $file) {
+		foreach ($this->getMediaFiles($this->env('input_path', '')) as $file) {
 			// should only be an image
 			if (!Media::isMIMEContentType($file, 'image')) continue;
 
@@ -330,12 +330,12 @@ class RoKMonster
 	private function getMediaFiles($path = null): array
 	{
 		// setup files
-		if (is_file($this->env('input_path', ''))) {
-			$files = [$this->env('input_path')];
+		if (is_file($path)) {
+			$files = [$path];
 
 			// setup path to search for files
-		} elseif (is_dir($this->env('input_path', ''))) {
-			$files = new \FilesystemIterator($this->env('input_path'), \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS);
+		} elseif (is_dir($path)) {
+			$files = new \FilesystemIterator($path, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS);
 
 			// not sure what we have
 		} else {
