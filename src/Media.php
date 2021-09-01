@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace carmelosantana\RoKMonster;
 
 use carmelosantana\TinyCLI\TinyCLI;
-use jamesheinrich\getid3\getID3;
+// getID3 is not-namespaced.
+use \getID3;
 use Jenssegers\ImageHash\ImageHash;
 use Jenssegers\ImageHash\Implementations\DifferenceHash;
 use Treinetic\ImageArtist\lib\Image as ImageArtist;
