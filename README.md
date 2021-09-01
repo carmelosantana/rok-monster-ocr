@@ -3,14 +3,18 @@
 [![Discord](https://img.shields.io/discord/768180228710465598)](https://discord.gg/drhxwVQ) [![License: MIT](https://img.shields.io/github/license/carmelosantana/rok-monster-ocr)](https://opensource.org/licenses/MIT)
 
 - [Rise of Kingdoms OCR Tools](#rise-of-kingdoms-ocr-tools)
-  - [RoK Monster OCR](#rok-monster-ocr)
-  - [How it works](#how-it-works)
+  - [Kingdom Statistics](#kingdom-statistics)
+    - [Features](#features)
+    - [Limitations](#limitations)
+  - [Process](#process)
   - [Install](#install)
+    - [Official Support](#official-support)
     - [Automated](#automated)
     - [Manual](#manual)
       - [Software](#software)
       - [Tessdata](#tessdata)
-      - [rok-monster-ocr](#rok-monster-ocr-1)
+      - [rok-monster-ocr](#rok-monster-ocr)
+  - [Community Installs](#community-installs)
   - [Usage](#usage)
     - [Start a job via CLI](#start-a-job-via-cli)
   - [Arguments](#arguments)
@@ -20,27 +24,32 @@
 
 ---
 
-📢 Please join our [Discord](https://discord.gg/drhxwVQ) to stay current on recent changes.
-
-<center>
-
-🌟 Inquire about **premium support**.🌟
-
-</center>
+👋 Join our [Discord](https://discord.gg/drhxwVQ) for help getting started or show off your results!
 
 ---
 
-## [RoK Monster OCR](https://rokmonster.com)
+## Kingdom Statistics
 
-Command line tools to generate player statistics from [Rise of Kingdoms](https://rok.lilithgames.com/en). By analyzing screenshots we can extract various data points such as governor power, deaths, kills and more. This can help with various kingdom statistics or fairly distributing [KvK](https://rok.guide/the-lost-kingdom-kvk/) rewards.
+Command line tools to help collect player statistics from [Rise of Kingdoms](https://rok.lilithgames.com/en). By analyzing screenshots we can extract various data points such as governor power, deaths, kills and more. This can help with various kingdom statistics or fairly distributing [KvK](https://rok.guide/the-lost-kingdom-kvk/) rewards.
 
 ![Sample](https://carmelosantana.com/app/uploads/2020/11/rok-monster-cli-v0.2.0.png)
 
 *Results may vary.*
 
-## How it works
+### Features
 
-Quick overview of the expected process when executing the job `governor-more-info-kills`.
+- Character recognition by [Tesseract](https://github.com/tesseract-ocr/tesseract)
+- Fast hash based image comparison
+- Live results with adb
+
+### Limitations
+
+- Best results with a 16:9 image at 1920*1080.
+- English language is preferred as coordinate information lines up most accurately with English.
+
+## Process
+
+Below is a quick overview of the actions performed while executing the job `governor-more-info-kills`.
 
 1. **rok-monster-ocr** will iterate through each screenshot and compare the input image to a known fingerprint of the image containing data to capture.
 2. If a match is made the image is prepared per the instructions declared in the OCR profile. *Each cropped segment represents a single data point.*
@@ -50,6 +59,10 @@ Quick overview of the expected process when executing the job `governor-more-inf
 > 📌 Input path can be defined in `.env` file or via CLI argument `--input_path`.
 
 ## Install
+
+### Official Support
+
+- Ubuntu 20.04.2
 
 ### Automated
 
@@ -75,16 +88,17 @@ sudo bash install.sh
 
 Requirements:
 
-- [PHP](https://www.php.net/manual/en/install.php) 7.4
+- [PHP](https://www.php.net/manual/en/install.php)
   - GD extension
 - [Composer](https://getcomposer.org/)
 - [ImageMagick](https://imagemagick.org/)
 - [Tesseract](https://github.com/tesseract-ocr/tesseract)
-- [FFmpeg](https://ffmpeg.org/) *(Only required if you plan on processing videos)*
+  - [Tessdata](https://github.com/tesseract-ocr/tessdata)
+- [FFmpeg](https://ffmpeg.org/) *(Optional, only required for processing video)*
 
 #### Software
 
-This assumes you have [PHP](https://www.php.net/manual/en/install.php) installed with access to [Composer](https://getcomposer.org/).
+This assumes you already have [PHP](https://www.php.net/manual/en/install.php) installed with access to [Composer](https://getcomposer.org/).
 
 ```bash
 sudo apt install imagemagick ffmpeg tesseract-ocr
@@ -114,41 +128,47 @@ cd rok-monster-ocr
 composer install
 ```
 
+## Community Installs
+
+These install methods are contributions made available by the community with no official support. It's the contributor's discretion to offer support via [Discord](https://discord.gg/drhxwVQ).
+
+| Method | Author                              | README                               |
+| ------ | ----------------------------------- | ------------------------------------ |
+| Docker | [xor22h](https://github.com/xor22h) | [docker.md](./doc/install/docker.md) |
+
 ## Usage
-
-- Game resolution and capture of at least 1920x1080.
-- English language is preferred as coordinate information lines up most accurately with English.
-- Move all images to your "Input Path" as defined in your `.env` file or via CLI argument `--input_path`.
-  - By default a "Media" folder is created in your current working directory if no directory is supplied.
-
-## Docker usage
-
-- Read [docker.md](./docker.md)
 
 ### Start a job via CLI
 
 1. Capture the necessary screens specified per the given job. In this example we need the **Governor More Info** profile screen.
-2. Run job:
+2. Move all images to your "Input Path" as defined in your `.env` file or via CLI argument `--input_path`.
+    >*By default a "Media" folder is created in your current working directory if no directory is supplied.*
+3. Run job:
 
     ```bash
     php rok.php --job=governor-more-info-kills --input_path=DIR_WITH_SCREENSHOTS
     ```
 
-3. Check your current working directory for any output files.
+    | Value                      | Description                                     |
+    | -------------------------- | ----------------------------------------------- |
+    | `governor-more-info-kills` | Default job for collecting kill points.         |
+    | `DIR_WITH_SCREENSHOTS`     | Full or relative path to DIR with screen shots. |
+
+4. Check your current working directory for any output files.
 
 ## Arguments
 
-| Argument | Value | Default | Description |
-| --- | --- | --- | --- |
-| debug | `bool` | `0` | Prints raw OCR reading per image. Uses local `--tmp_path` and preserves cropped images. |
-| job | `string` | *Required* | Name of job defined as defined in [rok-monster-schema](https://github.com/carmelosantana/rok-monster-schema) |
-| input_path | `string` | *Required* | Media source path or file  |
-| tmp_path | `string` | `sys_get_temp_dir()`| Temp directory for images manipulated during processing  |
-| oem | `int` | `0` | OCR Engine Mode |
-| psm | `int` | `0` | Page Segmentation Method |
-| tessdata | `string` | `null` | User defined location for tessdata. Defaults to system installation path.  |
-| compare_to_sample | `bool` | `1` | Enable compare to sample  |
-| video | `bool` | `1` | Enable video processing |
+| Argument          | Value    | Default              | Description                                                                                                  |
+| ----------------- | -------- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| debug             | `bool`   | `0`                  | Prints raw OCR reading per image. Uses local `--tmp_path` and preserves cropped images.                      |
+| job               | `string` | *Required*           | Name of job defined as defined in [rok-monster-schema](https://github.com/carmelosantana/rok-monster-schema) |
+| input_path        | `string` | *Required*           | Media source path or file                                                                                    |
+| tmp_path          | `string` | `sys_get_temp_dir()` | Temp directory for images manipulated during processing                                                      |
+| oem               | `int`    | `0`                  | OCR Engine Mode                                                                                              |
+| psm               | `int`    | `0`                  | Page Segmentation Method                                                                                     |
+| tessdata          | `string` | `null`               | User defined location for tessdata. Defaults to system installation path.                                    |
+| compare_to_sample | `bool`   | `1`                  | Enable compare to sample                                                                                     |
+| video             | `bool`   | `1`                  | Enable video processing                                                                                      |
 
 - *bool as `0\1` or `true\false` or `on\off`*
 
@@ -164,7 +184,7 @@ Honorable mentions for [community](https://discord.gg/drhxwVQ) members who've do
 
 ## Funding
 
-If you find **rok-monster-ocr** useful you can help fund future development by making a contribution to one of our funding sources below.
+If you find this project useful or use it ~~in a commercial environment~~ to manage your kingdom please consider donating today with one of the following options.
 
 - [PayPal](https://www.paypal.com/donate?hosted_button_id=EKK8CQTPJG7WL)
 - Bitcoin `bc1qx7v5vvxwnhpl3dssggy0hytcx2rpq5dkkfwyy4`
