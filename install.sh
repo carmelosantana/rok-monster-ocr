@@ -55,7 +55,7 @@ sudo apt Update
 sudo apt -y install git imagemagick ffmpeg tesseract-ocr
 
 # Install php
-sudo apt -y install $PHP $PHP-cli $PHP-common $PHP-gd $PHP-mbstring $PHP-snmp $PHP-xml $PHP-zip php-imagick
+sudo apt -y install $PHP $PHP-cli $PHP-common $PHP-gd $PHP-mbstring $PHP-snmp $PHP-xml $PHP-zip $PHP-imagick
 
 # Install rok-monster-cli + sample data
 if [ ! -f "$CHECK_FILE" ]; then
