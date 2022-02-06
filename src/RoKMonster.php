@@ -23,7 +23,7 @@ class RoKMonster
 
 	public object $templates;
 
-	const VERSION = '0.3.3';
+	const VERSION = '0.3.4';
 
 	/**
 	 * Starts instance with provided arguments
@@ -352,19 +352,6 @@ class RoKMonster
 				case 'image':
 					// add all images
 					$files_output[] = $file;
-					break;
-
-				case 'video':
-					// add exported images from video
-					if ($this->env('video')) {
-						$save_to = $this->env('tmp') . '/' . pathinfo($file)['filename'];
-						@mkdir($save_to, 0775, true);
-						Media::video_find_scene_change($file, $save_to);
-
-						// TODO: Remove tmp DIR
-						// add these video files to total files
-						$files_output += $this->getMediaFiles($save_to);
-					}
 					break;
 			}
 		}
