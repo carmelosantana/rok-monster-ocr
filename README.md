@@ -134,7 +134,7 @@ These install methods are contributions made available by the community with no 
 
 | Method | Author                              | README                               |
 | ------ | ----------------------------------- | ------------------------------------ |
-| Docker | [xor22h](https://github.com/xor22h) | [docker.md](./doc/install/docker.md) |
+| Docker | [xor22h](https://github.com/xor22h) | [docker.md](./docker.md) |
 
 ## Usage
 
