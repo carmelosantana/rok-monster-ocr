@@ -163,6 +163,7 @@ These install methods are contributions made available by the community with no 
 | debug             | `bool`   | `0`                  | Prints raw OCR reading per image. Uses local `--tmp_path` and preserves cropped images.                      |
 | job               | `string` | *Required*           | Name of job defined as defined in [rok-monster-schema](https://github.com/carmelosantana/rok-monster-schema) |
 | input_path        | `string` | *Required*           | Media source path or file                                                                                    |
+| output_path       | `string` | getcwd()             | Output path for csv.                                                                                         |
 | tmp_path          | `string` | `sys_get_temp_dir()` | Temp directory for images manipulated during processing                                                      |
 | oem               | `int`    | `0`                  | OCR Engine Mode                                                                                              |
 | psm               | `int`    | `0`                  | Page Segmentation Method                                                                                     |

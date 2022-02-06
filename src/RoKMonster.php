@@ -291,7 +291,8 @@ class RoKMonster
 
 	private function exportCSV()
 	{
-		$output_path_csv = getcwd() . DIRECTORY_SEPARATOR . time() . '.csv';
+		
+		$output_path_csv = $this->env("output_path", getcwd()) . DIRECTORY_SEPARATOR . time() . '.csv';
 
 		// we need at least 1 record
 		if (!isset($this->data[0]))
