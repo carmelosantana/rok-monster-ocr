@@ -3,6 +3,7 @@
 [![Discord](https://img.shields.io/discord/768180228710465598)](https://discord.gg/drhxwVQ) [![License: MIT](https://img.shields.io/github/license/carmelosantana/rok-monster-ocr)](https://opensource.org/licenses/MIT)
 
 - [Rise of Kingdoms OCR Tools](#rise-of-kingdoms-ocr-tools)
+  - [Community](#community)
   - [Kingdom Statistics](#kingdom-statistics)
     - [Features](#features)
     - [Limitations](#limitations)
@@ -18,21 +19,19 @@
   - [Usage](#usage)
     - [Start a job via CLI](#start-a-job-via-cli)
   - [Arguments](#arguments)
-  - [Community](#community)
+  - [Supporters](#supporters)
   - [Funding](#funding)
   - [License](#license)
 
----
+## Community
 
-👋 Join our [Discord](https://discord.gg/drhxwVQ) for help getting started or show off your results!
-
----
+👋 Join our [Discord](https://discord.gg/drhxwVQ) and discuss automated data collection for your kingdom today!
 
 ## Kingdom Statistics
 
 Command line tools to help collect player statistics from [Rise of Kingdoms](https://rok.lilithgames.com/en). By analyzing screenshots we can extract various data points such as governor power, deaths, kills and more. This can help with various kingdom statistics or fairly distributing [KvK](https://rok.guide/the-lost-kingdom-kvk/) rewards.
 
-![Sample](https://carmelosantana.com/app/uploads/2020/11/rok-monster-cli-v0.2.0.png)
+![Sample](https://carmelosantana.com/wp-content/uploads/2020/11/rok-monster-cli-v0.2.0.png)
 
 *Results may vary.*
 
@@ -94,14 +93,13 @@ Requirements:
 - [ImageMagick](https://imagemagick.org/)
 - [Tesseract](https://github.com/tesseract-ocr/tesseract)
   - [Tessdata](https://github.com/tesseract-ocr/tessdata)
-- [FFmpeg](https://ffmpeg.org/) *(Optional, only required for processing video)*
 
 #### Software
 
 This assumes you already have [PHP](https://www.php.net/manual/en/install.php) installed with access to [Composer](https://getcomposer.org/).
 
 ```bash
-sudo apt install imagemagick ffmpeg tesseract-ocr
+sudo apt install imagemagick tesseract-ocr
 ```
 
 *This does not represent the complete install instructions for all dependencies. Please review the [install script](https://github.com/carmelosantana/rok-monster-ocr/blob/master/install.sh) for detailed installation instructions.*
@@ -134,7 +132,7 @@ These install methods are contributions made available by the community with no 
 
 | Method | Author                              | README                               |
 | ------ | ----------------------------------- | ------------------------------------ |
-| Docker | [xor22h](https://github.com/xor22h) | [docker.md](./doc/install/docker.md) |
+| Docker | [xor22h](https://github.com/xor22h) | [docker.md](./docs/docker.md) |
 
 ## Usage
 
@@ -168,13 +166,10 @@ These install methods are contributions made available by the community with no 
 | psm               | `int`    | `0`                  | Page Segmentation Method                                                                                     |
 | tessdata          | `string` | `null`               | User defined location for tessdata. Defaults to system installation path.                                    |
 | compare_to_sample | `bool`   | `1`                  | Enable compare to sample                                                                                     |
-| video             | `bool`   | `1`                  | Enable video processing                                                                                      |
 
 - *bool as `0\1` or `true\false` or `on\off`*
 
-## Community
-
-Have a question, an idea, or need help getting started? Checkout our [Discord](https://discord.gg/drhxwVQ)!
+## Supporters
 
 Honorable mentions for [community](https://discord.gg/drhxwVQ) members who've donated time and resources to **rok-monster-ocr** or [rokmonster.com](https://rokmonster.com).
 
@@ -194,3 +189,5 @@ If you find this project useful or use it ~~in a commercial environment~~ to man
 ## License
 
 The code is licensed [MIT](https://opensource.org/licenses/MIT) and the documentation is licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+
+> *[Rise of Kingdoms](https://rok.lilithgames.com/en) is a trademark of Lilith Games.*
