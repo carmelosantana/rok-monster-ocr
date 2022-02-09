@@ -70,8 +70,13 @@ function install_rok_monster {
         cd $ROK_MONSTER_MAIN
     fi
 
+<<<<<<< HEAD
     # Install sample data
     git clone --depth 1 $ROK_MONSTER_SAMPLES
+=======
+# Install php
+sudo apt -y install $PHP $PHP-cli $PHP-common $PHP-gd $PHP-mbstring $PHP-snmp $PHP-xml $PHP-zip $PHP-imagick
+>>>>>>> main
 
     # Install Tesseract models from git
     git clone --depth 1 $TESSDATA$TESSDATA_VER
