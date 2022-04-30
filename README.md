@@ -1,8 +1,19 @@
 # Rise of Kingdoms OCR Tools
 
+### 📌 [RoK Monster OCR (golang)](https://github.com/xor22h/rok-monster-ocr-golang)
+
+🌞 It brings me great pleasure to announce the `golang` [fork](https://github.com/xor22h/rok-monster-ocr-golang) by [xor22h](https://github.com/xor22h) will be the official supported OCR client of the RoK Monster community. You can expect a vastly improved experience on nearly all existing RoK Monster features while greatly increasing usability.
+
+🥰 Thank you everyone for all the help and suggestions as we put the `php` version of RoK Monster to rest. I look forward to our community's next chapter.
+
+👋 Join our [Discord](https://discord.gg/drhxwVQ) for help getting started or show off your results!
+
+---
+
 [![Discord](https://img.shields.io/discord/768180228710465598)](https://discord.gg/drhxwVQ) [![License: MIT](https://img.shields.io/github/license/carmelosantana/rok-monster-ocr)](https://opensource.org/licenses/MIT)
 
 - [Rise of Kingdoms OCR Tools](#rise-of-kingdoms-ocr-tools)
+    - [📌 RoK Monster OCR (golang)](#-rok-monster-ocr-golang)
   - [Kingdom Statistics](#kingdom-statistics)
     - [Features](#features)
     - [Limitations](#limitations)
@@ -21,10 +32,6 @@
   - [Community](#community)
   - [Funding](#funding)
   - [License](#license)
-
----
-
-👋 Join our [Discord](https://discord.gg/drhxwVQ) for help getting started or show off your results!
 
 ---
 
@@ -132,8 +139,8 @@ composer install
 
 These install methods are contributions made available by the community with no official support. It's the contributor's discretion to offer support via [Discord](https://discord.gg/drhxwVQ).
 
-| Method | Author                              | README                               |
-| ------ | ----------------------------------- | ------------------------------------ |
+| Method | Author                              | README                   |
+| ------ | ----------------------------------- | ------------------------ |
 | Docker | [xor22h](https://github.com/xor22h) | [docker.md](./docker.md) |
 
 ## Usage
