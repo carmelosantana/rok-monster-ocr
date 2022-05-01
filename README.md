@@ -10,10 +10,23 @@
 
 ---
 
+### Archives
+
+| Repository                                                                   | Description                                                                                             |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [rok-monster-ai](https://github.com/carmelosantana/rok-monster-ai)           | Unfinished automated kingdom assistant. Used `php-adb` to perform scripted events on an Android device. |
+| [rok-monster-ocr](https://github.com/carmelosantana/rok-monster-ocr)         | This repository.                                                                                        |
+| [rok-monster-samples](https://github.com/carmelosantana/rok-monster-samples) | Sample images sorted by resolution and client version                                                   |
+| [rok-monster-schema](https://github.com/carmelosantana/rok-monster-schema)   | Instruction sets to standardize OCR instructions.                                                       |
+| [rok-monster-ui](https://github.com/carmelosantana/rok-monster-ui)           | WordPress theme originally on rokmonster.com providing a web UI for rok-monster-ocr CLI.                |
+--- 
+
 [![Discord](https://img.shields.io/discord/768180228710465598)](https://discord.gg/drhxwVQ) [![License: MIT](https://img.shields.io/github/license/carmelosantana/rok-monster-ocr)](https://opensource.org/licenses/MIT)
 
 - [Rise of Kingdoms OCR Tools](#rise-of-kingdoms-ocr-tools)
     - [📌 RoK Monster OCR (golang)](#-rok-monster-ocr-golang)
+    - [Archives](#archives)
+  - [| rok-monster-ui           | WordPress theme originally on rokmonster.com providing a web UI for rok-monster-ocr CLI.                |](#-rok-monster-ui------------wordpress-theme-originally-on-rokmonstercom-providing-a-web-ui-for-rok-monster-ocr-cli----------------)
   - [Kingdom Statistics](#kingdom-statistics)
     - [Features](#features)
     - [Limitations](#limitations)
